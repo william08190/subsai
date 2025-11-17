@@ -29,6 +29,16 @@ from subsai.utils import available_subs_formats
 from streamlit.web import cli as stcli
 from tempfile import NamedTemporaryFile
 
+# 导入卡拉OK功能模块
+try:
+    from subsai.karaoke_generator import KaraokeGenerator, create_karaoke_subtitles
+    from subsai.karaoke_styles import get_all_styles, get_style_names, STYLE_NAMES
+    from subsai.karaoke_batch import KaraokeBatchProcessor
+    KARAOKE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Karaoke features not available: {e}")
+    KARAOKE_AVAILABLE = False
+
 __author__ = "absadiki"
 __contact__ = "https://github.com/absadiki"
 __copyright__ = "Copyright 2023,"
@@ -560,6 +570,184 @@ def webui() -> None:
                 st.error("Something went wrong!")
                 st.error("See the terminal for more info!")
                 print(e)
+
+    # 卡拉OK视频生成功能（新增）
+    if KARAOKE_AVAILABLE:
+        with st.expander('🎤 Generate Karaoke Video (NEW)', expanded=False):
+            st.info('🎵 Generate karaoke-style subtitles with word-level highlighting effects!')
+
+            # 卡拉OK样式选择
+            karaoke_col1, karaoke_col2 = st.columns([1, 1])
+
+            with karaoke_col1:
+                available_styles = get_style_names()
+                style_descriptions = {
+                    'classic': '经典风格 - 传统KTV黄色高亮',
+                    'modern': '现代风格 - 简约橙色渐变',
+                    'neon': '霓虹风格 - 赛博朋克紫红色',
+                    'elegant': '优雅风格 - 金色柔和动画',
+                    'anime': '动漫风格 - 青色描边效果'
+                }
+
+                selected_style = st.selectbox(
+                    'Karaoke Style',
+                    options=available_styles,
+                    index=0,
+                    format_func=lambda x: f"{x.capitalize()} - {style_descriptions.get(x, '')}",
+                    help='选择卡拉OK字幕样式'
+                )
+
+            with karaoke_col2:
+                words_per_line = st.slider(
+                    'Words per Line',
+                    min_value=1,
+                    max_value=20,
+                    value=10,
+                    help='每行显示的单词数量'
+                )
+
+            # 使用当前字幕生成卡拉OK视频
+            media_file = Path(file_path)
+            karaoke_output_filename = st.text_input(
+                'Output Filename',
+                value=f"{media_file.stem}-karaoke",
+                key='karaoke_output_filename'
+            )
+
+            karaoke_generate_btn = st.button("🎤 Generate Karaoke Video", type='primary', key='karaoke_generate_btn')
+
+            if karaoke_generate_btn:
+                try:
+                    if 'transcribed_subs' not in st.session_state or st.session_state['transcribed_subs'] is None:
+                        st.error("⚠️ Please transcribe the video first before generating karaoke!")
+                    else:
+                        with st.spinner("🎵 Generating karaoke subtitles and burning to video... This may take a while..."):
+                            subs = st.session_state['transcribed_subs']
+
+                            # 生成卡拉OK字幕
+                            st.info(f"📝 Converting to karaoke format (style: {selected_style})...")
+                            karaoke_subs = create_karaoke_subtitles(
+                                subs=subs,
+                                style_name=selected_style,
+                                words_per_line=words_per_line
+                            )
+
+                            if karaoke_subs is None or len(karaoke_subs) == 0:
+                                st.error("❌ Failed to generate karaoke subtitles")
+                            else:
+                                st.info(f"✅ Generated {len(karaoke_subs)} karaoke subtitle events")
+
+                                # 保存ASS字幕文件
+                                karaoke_ass_file = media_file.parent / f"{karaoke_output_filename}.ass"
+                                karaoke_subs.save(str(karaoke_ass_file))
+                                st.success(f"💾 Karaoke subtitles saved: {karaoke_ass_file}")
+
+                                # 烧录到视频
+                                st.info("🎬 Burning karaoke subtitles to video (using ffmpeg)...")
+                                karaoke_video_path = tools.merge_subs_with_video(
+                                    subs={'karaoke': karaoke_subs},
+                                    media_file=str(media_file.resolve()),
+                                    output_filename=karaoke_output_filename
+                                )
+
+                                st.success(f'🎉 Karaoke video generated successfully!')
+                                st.success(f'📁 Output file: {karaoke_video_path}')
+
+                                # 提供下载（如果文件大小允许）
+                                if os.path.exists(karaoke_video_path) and os.path.getsize(karaoke_video_path) < 200 * 1024 * 1024:  # 小于200MB
+                                    with open(karaoke_video_path, 'rb') as f:
+                                        st.download_button(
+                                            '⬇️ Download Karaoke Video',
+                                            f,
+                                            file_name=f"{karaoke_output_filename}{media_file.suffix}",
+                                            mime='video/mp4'
+                                        )
+                                else:
+                                    st.info("📦 Video file is too large for download. Please access it from the output directory.")
+
+                except Exception as e:
+                    st.error(f"❌ Karaoke generation failed: {str(e)}")
+                    st.error("See the terminal for more info!")
+                    print(f"Karaoke error: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            # 批量处理功能
+            st.markdown("---")
+            st.markdown("### 📦 Batch Processing")
+
+            batch_input_dir = st.text_input(
+                'Batch Input Directory',
+                help='Directory containing multiple video files',
+                key='karaoke_batch_input'
+            )
+            batch_output_dir = st.text_input(
+                'Batch Output Directory',
+                help='Directory to save processed karaoke videos',
+                key='karaoke_batch_output'
+            )
+
+            batch_process_btn = st.button("🔄 Batch Process Videos", key='karaoke_batch_btn')
+
+            if batch_process_btn:
+                if not batch_input_dir or not batch_output_dir:
+                    st.error("⚠️ Please specify both input and output directories")
+                elif not os.path.exists(batch_input_dir):
+                    st.error(f"⚠️ Input directory does not exist: {batch_input_dir}")
+                else:
+                    try:
+                        st.info(f"🔄 Starting batch processing...")
+
+                        # 使用默认配置文件（如果存在）
+                        default_config_path = "D:\\Downloads\\linto-ai-whisper-timestamped_configs.json"
+                        model_config = None
+
+                        if os.path.exists(default_config_path):
+                            with open(default_config_path, 'r', encoding='utf-8') as f:
+                                model_config = json.load(f)
+                            st.info(f"📋 Loaded config: {default_config_path}")
+
+                        # 创建批量处理器
+                        processor = KaraokeBatchProcessor(
+                            model_name="linto-ai/whisper-timestamped",
+                            model_config=model_config,
+                            style_name=selected_style,
+                            words_per_line=words_per_line,
+                            max_workers=1
+                        )
+
+                        # 扫描视频文件
+                        video_files = processor.scan_videos(batch_input_dir)
+                        st.info(f"📹 Found {len(video_files)} video files")
+
+                        if video_files:
+                            # 创建进度条
+                            progress_bar = st.progress(0)
+                            status_text = st.empty()
+
+                            # 批量处理
+                            results = []
+                            for idx, video_path in enumerate(video_files, 1):
+                                status_text.text(f"Processing {idx}/{len(video_files)}: {video_path.name}")
+                                progress_bar.progress(idx / len(video_files))
+
+                                result = processor.process_single_video(video_path, batch_output_dir)
+                                results.append(result)
+
+                            # 显示结果
+                            success_count = sum(1 for r in results if r['success'])
+                            st.success(f"✅ Batch processing complete!")
+                            st.info(f"📊 Results: {success_count}/{len(video_files)} succeeded")
+
+                            # 生成报告
+                            report_path = processor.generate_report(results, batch_output_dir)
+                            st.success(f"📄 Report saved: {report_path}")
+
+                    except Exception as e:
+                        st.error(f"❌ Batch processing failed: {str(e)}")
+                        print(f"Batch processing error: {e}")
+                        import traceback
+                        traceback.print_exc()
 
     with st.expander('Export configs file'):
         export_filename = st.text_input('Filename', value=f"{stt_model_name}_configs.json".replace('/', '-'))
