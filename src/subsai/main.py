@@ -265,9 +265,14 @@ class Tools:
 
         :return: Absolute path of the output file
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         metadata = ffmpeg.probe(media_file, select_streams="v")['streams'][0]
         assert metadata['codec_type'] == 'video', f'File {media_file} is not a video'
 
+        logger.info(f"🎬 开始合并字幕到视频: {media_file}")
+        logger.info(f"📝 字幕语言数量: {len(subs)}")
 
         # 创建临时文件字典，存储文件路径而不是文件句柄
         srtin_files = {}
@@ -276,21 +281,58 @@ class Tools:
             temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.srt', delete=False, encoding='utf-8')
             temp_file.close()
             srtin_files[key] = temp_file.name
+            logger.info(f"📄 创建临时文件: {key} -> {temp_file.name}")
 
         try:
             in_file = pathlib.Path(media_file)
             if output_filename is not None:
+                # 保持输入文件的扩展名
                 out_file = in_file.parent / f"{output_filename}{in_file.suffix}"
             else:
                 out_file = in_file.parent / f"{in_file.stem}-subs-merged{in_file.suffix}"
 
             video = str(in_file.resolve())
-            metadata_subs = {'scodec': 'mov_text'} if metadata['codec_name'] == 'h264' else {}
+
+            # 检测视频编码器和容器格式
+            video_codec = metadata['codec_name']
+            logger.info(f"🎥 检测到视频编码器: {video_codec}")
+
+            # 根据输入格式选择合适的字幕编码器
+            # WebM使用webvtt,MP4使用mov_text
+            if in_file.suffix.lower() in ['.webm', '.mkv']:
+                # WebM/MKV容器使用webvtt字幕
+                metadata_subs = {'scodec': 'webvtt'}
+                logger.info(f"📦 WebM/MKV容器 -> 使用webvtt字幕")
+            elif metadata['codec_name'] == 'h264':
+                # H264视频使用mov_text字幕
+                metadata_subs = {'scodec': 'mov_text'}
+                logger.info(f"📦 H264视频 -> 使用mov_text字幕")
+            else:
+                # 其他格式，尝试使用srt
+                metadata_subs = {}
+                logger.info(f"📦 其他格式 -> 使用默认字幕编码")
+
             ffmpeg_subs_inputs = []
+
             for i, lang in enumerate(srtin_files):
                 srtin = srtin_files[lang]
+
                 # 保存字幕到临时文件
+                logger.info(f"💾 保存字幕 '{lang}' 到: {srtin}")
                 subs[lang].save(srtin)
+
+                # 检查文件是否真的被写入
+                if os.path.exists(srtin):
+                    file_size = os.path.getsize(srtin)
+                    logger.info(f"✅ 字幕文件已创建，大小: {file_size} 字节")
+
+                    # 读取前100个字符用于调试
+                    with open(srtin, 'r', encoding='utf-8') as f:
+                        preview = f.read(100)
+                        logger.info(f"📖 文件内容预览: {preview[:50]}...")
+                else:
+                    logger.error(f"❌ 字幕文件不存在: {srtin}")
+
                 ffmpeg_subs_inputs.append(ffmpeg.input(srtin)['s'])
                 metadata_subs[f'metadata:s:s:{i}'] = "title=" + lang
 
@@ -298,19 +340,39 @@ class Tools:
             input_ffmpeg = ffmpeg.input(video)
             input_video = input_ffmpeg['v']
             input_audio = input_ffmpeg['a']
+
+            # 使用copy模式，不重新编码，保持原格式
+            logger.info(f"✅ 使用copy模式，保持原视频音频格式")
             output_ffmpeg = ffmpeg.output(
                 input_video, input_audio, *ffmpeg_subs_inputs, output_file,
-                vcodec='copy', acodec='copy',
-                # scodec='mov_text',
+                vcodec='copy',
+                acodec='copy',
                 **metadata_subs
             )
             output_ffmpeg = ffmpeg.overwrite_output(output_ffmpeg)
-            ffmpeg.run(output_ffmpeg)
+
+            # 打印ffmpeg命令用于调试
+            cmd = ffmpeg.compile(output_ffmpeg)
+            logger.info(f"🎬 执行ffmpeg命令: {' '.join(cmd)}")
+
+            # 捕获ffmpeg输出
+            try:
+                stdout, stderr = ffmpeg.run(output_ffmpeg, capture_stdout=True, capture_stderr=True)
+                logger.info(f"✅ ffmpeg执行成功")
+                if stderr:
+                    logger.debug(f"ffmpeg stderr: {stderr.decode('utf-8', errors='ignore')[-500:]}")
+            except ffmpeg.Error as e:
+                logger.error(f"❌ ffmpeg执行失败: {e.stderr.decode('utf-8', errors='ignore')}")
+                raise
+
         finally:
             # 清理临时字幕文件
             for srtin_path in srtin_files.values():
                 if os.path.exists(srtin_path):
+                    logger.info(f"🗑️ 删除临时文件: {srtin_path}")
                     os.unlink(srtin_path)
+
+        logger.info(f"🎉 字幕合并完成: {out_file.resolve()}")
         return str(out_file.resolve())
 
     @staticmethod
@@ -343,6 +405,11 @@ class Tools:
 
         :return: Absolute path of the output file
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        logger.info(f"🎤 开始烧录卡拉OK字幕: {media_file}")
+
         metadata = ffmpeg.probe(media_file, select_streams="v")['streams'][0]
         assert metadata['codec_type'] == 'video', f'File {media_file} is not a video'
 
@@ -351,8 +418,21 @@ class Tools:
 
         try:
             # Save subtitles as ASS format to preserve karaoke effects
+            logger.info(f"📄 创建临时ASS文件: {ass_temp.name}")
             subs.save(ass_temp.name)
             ass_temp.close()
+
+            # 检查ASS文件
+            if os.path.exists(ass_temp.name):
+                file_size = os.path.getsize(ass_temp.name)
+                logger.info(f"✅ ASS文件已创建，大小: {file_size} 字节")
+
+                # 读取前200个字符用于调试
+                with open(ass_temp.name, 'r', encoding='utf-8') as f:
+                    preview = f.read(200)
+                    logger.info(f"📖 ASS文件内容预览:\n{preview[:150]}...")
+            else:
+                logger.error(f"❌ ASS文件不存在: {ass_temp.name}")
 
             in_file = pathlib.Path(media_file)
             if output_filename is not None:
@@ -362,6 +442,7 @@ class Tools:
 
             # Escape the ASS file path for ffmpeg (Windows paths need special handling)
             ass_path = ass_temp.name.replace('\\', '/').replace(':', '\\:')
+            logger.info(f"🔧 转义后的ASS路径: {ass_path}")
 
             # Build ffmpeg command with subtitles filter
             input_video = ffmpeg.input(media_file)
@@ -383,13 +464,30 @@ class Tools:
             )
 
             output_ffmpeg = ffmpeg.overwrite_output(output_ffmpeg)
-            ffmpeg.run(output_ffmpeg, capture_stdout=True, capture_stderr=True)
+
+            # 打印ffmpeg命令
+            cmd = ffmpeg.compile(output_ffmpeg)
+            logger.info(f"🎬 执行ffmpeg命令: {' '.join(cmd)}")
+
+            # 捕获ffmpeg输出
+            try:
+                stdout, stderr = ffmpeg.run(output_ffmpeg, capture_stdout=True, capture_stderr=True)
+                logger.info(f"✅ ffmpeg执行成功")
+                if stderr:
+                    stderr_text = stderr.decode('utf-8', errors='ignore')
+                    logger.debug(f"ffmpeg stderr (last 500 chars): {stderr_text[-500:]}")
+            except ffmpeg.Error as e:
+                error_text = e.stderr.decode('utf-8', errors='ignore')
+                logger.error(f"❌ ffmpeg执行失败:\n{error_text}")
+                raise
 
         finally:
             # Clean up temporary ASS file
             if os.path.exists(ass_temp.name):
+                logger.info(f"🗑️ 删除临时ASS文件: {ass_temp.name}")
                 os.unlink(ass_temp.name)
 
+        logger.info(f"🎉 卡拉OK字幕烧录完成: {out_file.resolve()}")
         return str(out_file.resolve())
 
 if __name__ == '__main__':
