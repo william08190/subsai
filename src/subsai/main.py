@@ -269,7 +269,14 @@ class Tools:
         assert metadata['codec_type'] == 'video', f'File {media_file} is not a video'
 
 
-        srtin_files = {key: tempfile.NamedTemporaryFile(delete=False) for key in subs}
+        # 创建临时文件字典，存储文件路径而不是文件句柄
+        srtin_files = {}
+        for key in subs:
+            # 创建临时文件并立即关闭，只保留路径
+            temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.srt', delete=False, encoding='utf-8')
+            temp_file.close()
+            srtin_files[key] = temp_file.name
+
         try:
             in_file = pathlib.Path(media_file)
             if output_filename is not None:
@@ -280,8 +287,9 @@ class Tools:
             video = str(in_file.resolve())
             metadata_subs = {'scodec': 'mov_text'} if metadata['codec_name'] == 'h264' else {}
             ffmpeg_subs_inputs = []
-            for i,lang in enumerate(srtin_files):
-                srtin = srtin_files[lang].name + '.srt'
+            for i, lang in enumerate(srtin_files):
+                srtin = srtin_files[lang]
+                # 保存字幕到临时文件
                 subs[lang].save(srtin)
                 ffmpeg_subs_inputs.append(ffmpeg.input(srtin)['s'])
                 metadata_subs[f'metadata:s:s:{i}'] = "title=" + lang
@@ -299,9 +307,10 @@ class Tools:
             output_ffmpeg = ffmpeg.overwrite_output(output_ffmpeg)
             ffmpeg.run(output_ffmpeg)
         finally:
-            for srtin_file in srtin_files.values():
-                srtin_file.close()
-                os.unlink(srtin_file.name)
+            # 清理临时字幕文件
+            for srtin_path in srtin_files.values():
+                if os.path.exists(srtin_path):
+                    os.unlink(srtin_path)
         return str(out_file.resolve())
 
     @staticmethod
