@@ -12,7 +12,7 @@ RUN sed -i 's@http://.*archive.ubuntu.com@https://mirrors.aliyun.com@g' /etc/apt
     sed -i 's@http://.*security.ubuntu.com@https://mirrors.aliyun.com@g' /etc/apt/sources.list && \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y git gcc mono-mcs && \
+    apt-get install -y git gcc mono-mcs ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 # 配置pip使用清华镜像源

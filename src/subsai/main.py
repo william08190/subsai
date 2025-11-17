@@ -444,42 +444,39 @@ class Tools:
             ass_path = ass_temp.name.replace('\\', '/').replace(':', '\\:')
             logger.info(f"🔧 转义后的ASS路径: {ass_path}")
 
-            # Build ffmpeg command with subtitles filter
-            input_video = ffmpeg.input(media_file)
-
-            # Apply subtitles filter to burn ASS into video
-            video_with_subs = input_video.video.filter('subtitles', ass_path)
-
             output_file = str(out_file.resolve())
 
-            # Output with re-encoded video and copied audio
-            output_ffmpeg = ffmpeg.output(
-                video_with_subs,
-                input_video.audio,
-                output_file,
-                vcodec=video_codec,
-                crf=crf,
-                acodec='copy',
-                preset='medium'
-            )
+            # Build ffmpeg command manually for better control over parameter order
+            # Using system ffmpeg (from apt) which supports libx264 and subtitles filter
+            import subprocess
 
-            output_ffmpeg = ffmpeg.overwrite_output(output_ffmpeg)
+            # Construct ffmpeg command with proper parameter order
+            ffmpeg_cmd = [
+                'ffmpeg',
+                '-i', media_file,
+                '-vf', f'subtitles={ass_temp.name}',  # ASS subtitle filter
+                '-c:v', video_codec,  # Use libx264 (supported by system ffmpeg)
+                '-crf', str(crf),  # CRF quality control
+                '-preset', 'medium',
+                '-c:a', 'copy',  # Copy audio without re-encoding
+                '-y',
+                output_file
+            ]
 
-            # 打印ffmpeg命令
-            cmd = ffmpeg.compile(output_ffmpeg)
-            logger.info(f"🎬 执行ffmpeg命令: {' '.join(cmd)}")
+            logger.info(f"🎬 执行ffmpeg命令: {' '.join(ffmpeg_cmd)}")
 
-            # 捕获ffmpeg输出
+            # Run ffmpeg
             try:
-                stdout, stderr = ffmpeg.run(output_ffmpeg, capture_stdout=True, capture_stderr=True)
+                result = subprocess.run(
+                    ffmpeg_cmd,
+                    capture_output=True,
+                    check=True
+                )
                 logger.info(f"✅ ffmpeg执行成功")
-                if stderr:
-                    stderr_text = stderr.decode('utf-8', errors='ignore')
-                    logger.debug(f"ffmpeg stderr (last 500 chars): {stderr_text[-500:]}")
-            except ffmpeg.Error as e:
+            except subprocess.CalledProcessError as e:
                 error_text = e.stderr.decode('utf-8', errors='ignore')
                 logger.error(f"❌ ffmpeg执行失败:\n{error_text}")
-                raise
+                raise Exception(f"ffmpeg error: {error_text}")
 
         finally:
             # Clean up temporary ASS file
