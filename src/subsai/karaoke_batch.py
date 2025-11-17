@@ -194,15 +194,15 @@ class KaraokeBatchProcessor:
             karaoke_subs.save(str(ass_file))
             logger.info(f"  ASS字幕保存至: {ass_file}")
 
-            # 4. 烧录字幕到视频
+            # 4. 烧录字幕到视频（使用专用卡拉OK烧录方法）
             if progress_callback:
                 progress_callback(f"烧录字幕到视频: {video_path.name}", 70)
 
             logger.info(f"  [3/3] 烧录字幕到视频...")
             output_video = str(output_path / f"{video_path.stem}_karaoke{video_path.suffix}")
 
-            merged_video = self.tools.merge_subs_with_video(
-                subs={"karaoke": karaoke_subs},
+            merged_video = self.tools.burn_karaoke_subtitles(
+                subs=karaoke_subs,
                 media_file=str(video_path),
                 output_filename=output_video.replace(video_path.suffix, '')
             )

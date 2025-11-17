@@ -642,10 +642,10 @@ def webui() -> None:
                                 karaoke_subs.save(str(karaoke_ass_file))
                                 st.success(f"💾 Karaoke subtitles saved: {karaoke_ass_file}")
 
-                                # 烧录到视频
-                                st.info("🎬 Burning karaoke subtitles to video (using ffmpeg)...")
-                                karaoke_video_path = tools.merge_subs_with_video(
-                                    subs={'karaoke': karaoke_subs},
+                                # 烧录到视频（使用专用卡拉OK烧录方法）
+                                st.info("🎬 Burning karaoke subtitles to video (using ffmpeg with ASS support)...")
+                                karaoke_video_path = tools.burn_karaoke_subtitles(
+                                    subs=karaoke_subs,
                                     media_file=str(media_file.resolve()),
                                     output_filename=karaoke_output_filename
                                 )

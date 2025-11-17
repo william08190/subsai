@@ -304,6 +304,85 @@ class Tools:
                 os.unlink(srtin_file.name)
         return str(out_file.resolve())
 
+    @staticmethod
+    def burn_karaoke_subtitles(subs: SSAFile,
+                               media_file: str,
+                               output_filename: str = None,
+                               video_codec: str = 'libx264',
+                               crf: int = 23) -> str:
+        """
+        Uses ffmpeg to burn ASS karaoke subtitles into video as hardcoded subtitles.
+        This method preserves ASS karaoke effects (\k tags) by using the subtitles filter.
+
+        Example:
+        ```python
+            from subsai import Tools
+            from subsai.karaoke_generator import create_karaoke_subtitles
+
+            # Generate karaoke subtitles
+            karaoke_subs = create_karaoke_subtitles(original_subs, style_name='classic')
+
+            # Burn to video
+            output = Tools.burn_karaoke_subtitles(karaoke_subs, 'input.mp4', 'output_karaoke')
+        ```
+
+        :param subs: SSAFile object with ASS karaoke subtitles
+        :param media_file: path of the video file
+        :param output_filename: Output file name (without extension)
+        :param video_codec: Video codec for encoding (default: libx264)
+        :param crf: Constant Rate Factor for quality (default: 23, lower = better quality)
+
+        :return: Absolute path of the output file
+        """
+        metadata = ffmpeg.probe(media_file, select_streams="v")['streams'][0]
+        assert metadata['codec_type'] == 'video', f'File {media_file} is not a video'
+
+        # Create temporary ASS file
+        ass_temp = tempfile.NamedTemporaryFile(mode='w', suffix='.ass', delete=False, encoding='utf-8')
+
+        try:
+            # Save subtitles as ASS format to preserve karaoke effects
+            subs.save(ass_temp.name)
+            ass_temp.close()
+
+            in_file = pathlib.Path(media_file)
+            if output_filename is not None:
+                out_file = in_file.parent / f"{output_filename}{in_file.suffix}"
+            else:
+                out_file = in_file.parent / f"{in_file.stem}-karaoke{in_file.suffix}"
+
+            # Escape the ASS file path for ffmpeg (Windows paths need special handling)
+            ass_path = ass_temp.name.replace('\\', '/').replace(':', '\\:')
+
+            # Build ffmpeg command with subtitles filter
+            input_video = ffmpeg.input(media_file)
+
+            # Apply subtitles filter to burn ASS into video
+            video_with_subs = input_video.video.filter('subtitles', ass_path)
+
+            output_file = str(out_file.resolve())
+
+            # Output with re-encoded video and copied audio
+            output_ffmpeg = ffmpeg.output(
+                video_with_subs,
+                input_video.audio,
+                output_file,
+                vcodec=video_codec,
+                crf=crf,
+                acodec='copy',
+                preset='medium'
+            )
+
+            output_ffmpeg = ffmpeg.overwrite_output(output_ffmpeg)
+            ffmpeg.run(output_ffmpeg, capture_stdout=True, capture_stderr=True)
+
+        finally:
+            # Clean up temporary ASS file
+            if os.path.exists(ass_temp.name):
+                os.unlink(ass_temp.name)
+
+        return str(out_file.resolve())
+
 if __name__ == '__main__':
     file = '../../assets/video/test1.webm'
     subs_ai = SubsAI()
