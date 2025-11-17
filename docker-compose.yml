@@ -1,18 +1,24 @@
 version: '3.8'
 
 services:
-  subsai-webui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [ gpu ]
-
   subsai-webui-cpu:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: subsai-webui
+    ports:
+      - "8501:8501"
+    volumes:
+      # 输入视频目录
+      - /mnt/c/william/InfiniteTalk-v0828/output:/input:ro
+      # 输出目录
+      - /mnt/c/Users/xiaox/Videos/KaraokeOutput:/output
+      # 模型缓存目录（避免每次重新下载）
+      - subsai-models:/root/.cache
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_ENDPOINT=https://hf-mirror.com
+    restart: unless-stopped
+
+volumes:
+  subsai-models:
