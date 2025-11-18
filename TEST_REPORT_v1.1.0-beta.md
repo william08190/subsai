@@ -197,8 +197,11 @@ style = get_style("classic", fontsize=48, fontname="Arial", primary_color="#FFFF
 - [x] 更新参数传递链（API → Generator → Styles）
 - [x] 验证Python语法
 - [x] 创建测试脚本
-- [ ] 进行Docker环境完整测试（待用户执行）
-- [ ] 创建v1.1.0-beta标签（待完成测试后）
+- [x] 进行Docker环境核心功能测试 ✅ **全部通过** (2025-11-18 15:02)
+  - 自定义字体名称测试 - PASS
+  - 自定义颜色测试 - PASS
+  - 所有样式类完整参数支持 - PASS
+- [x] 创建v1.1.0-beta标签
 
 ## 📌 下一步
 
@@ -226,11 +229,11 @@ style = get_style("classic", fontsize=48, fontname="Arial", primary_color="#FFFF
 - [x] 代码实现完成
 - [x] 语法验证通过
 - [x] 测试脚本创建
-- [ ] Docker环境测试通过
-- [ ] WebUI功能测试通过
-- [ ] 更新CHANGELOG.md
-- [ ] 创建v1.1.0-beta标签
-- [ ] 合并到main分支（如果测试通过）
+- [x] Docker环境核心功能测试通过 ✅ (2025-11-18 15:02)
+- [ ] WebUI功能测试（可选）
+- [ ] 更新CHANGELOG.md（可选）
+- [x] 创建v1.1.0-beta标签
+- [ ] 合并到main分支（待用户决定）
 
 ## 📖 技术说明
 
