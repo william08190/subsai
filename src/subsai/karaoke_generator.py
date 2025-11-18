@@ -175,8 +175,8 @@ class KaraokeGenerator:
         # 创建新的SSAFile
         karaoke_subs = SSAFile()
 
-        # 设置样式（使用SSAStyle对象）
-        style_name = STYLE_NAMES.get(self.style.name.split()[0].lower(), "Default")
+        # 设置样式（使用样式的style_key）
+        style_name = self.style.style_key if self.style.style_key else "Default"
         karaoke_subs.styles[style_name] = self.style.get_ssa_style()
 
         # 为每行创建事件
@@ -223,8 +223,8 @@ class KaraokeGenerator:
         # 创建新的SSAFile
         karaoke_subs = SSAFile()
 
-        # 设置样式（使用SSAStyle对象）
-        style_name = STYLE_NAMES.get(self.style.name.split()[0].lower(), "Default")
+        # 设置样式（使用样式的style_key）
+        style_name = self.style.style_key if self.style.style_key else "Default"
         karaoke_subs.styles[style_name] = self.style.get_ssa_style()
 
         # 为每行创建事件

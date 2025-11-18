@@ -36,10 +36,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 class KaraokeStyle:
     """卡拉OK样式基类"""
 
-    def __init__(self, style_id: int, name: str, description: str, fontsize: Optional[int] = None):
+    def __init__(self, style_id: int, name: str, description: str, style_key: str = "", fontsize: Optional[int] = None):
         self.style_id = style_id
         self.name = name
         self.description = description
+        self.style_key = style_key  # ASS样式名称（如 "Classic", "Modern"）
         self.custom_fontsize = fontsize  # 自定义字体大小
 
     def get_default_fontsize(self) -> int:
@@ -66,9 +67,9 @@ class KaraokeStyle:
             duration_cs: 持续时间（厘秒，1秒=100厘秒）
 
         Returns:
-            卡拉OK标签字符串 (例如: {\\k50})
+            卡拉OK标签字符串 (例如: {\\kf50})
         """
-        return f"{{\\k{duration_cs}}}"
+        return f"{{\\kf{duration_cs}}}"  # 使用 \kf 填充效果（从左到右平滑填充）
 
 
 class ClassicStyle(KaraokeStyle):
@@ -79,6 +80,7 @@ class ClassicStyle(KaraokeStyle):
             style_id=1,
             name="经典风格 Classic",
             description="传统KTV卡拉OK样式，黄色高亮，下方居中显示",
+            style_key="Classic",
             fontsize=fontsize
         )
 
@@ -128,6 +130,7 @@ class ModernStyle(KaraokeStyle):
             style_id=2,
             name="现代风格 Modern",
             description="现代简约设计，橙色渐变高亮，顶部居中显示",
+            style_key="Modern",
             fontsize=fontsize
         )
 
@@ -175,6 +178,7 @@ class NeonStyle(KaraokeStyle):
             style_id=3,
             name="霓虹风格 Neon",
             description="赛博朋克霓虹效果，紫红色光晕，中部居中",
+            style_key="Neon",
             fontsize=fontsize
         )
 
@@ -223,6 +227,7 @@ class ElegantStyle(KaraokeStyle):
             style_id=4,
             name="优雅风格 Elegant",
             description="优雅字体，金色柔和动画，下方居中",
+            style_key="Elegant",
             fontsize=fontsize
         )
 
@@ -271,6 +276,7 @@ class AnimeStyle(KaraokeStyle):
             style_id=5,
             name="动漫风格 Anime",
             description="动漫字幕风格，青色描边效果，下方居中",
+            style_key="Anime",
             fontsize=fontsize
         )
 
