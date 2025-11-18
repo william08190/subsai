@@ -29,7 +29,8 @@ class KaraokeGenerator:
                  style_name: str = "classic",
                  words_per_line: int = 10,
                  max_line_duration_ms: int = 5000,
-                 fontsize: Optional[int] = None):
+                 fontsize: Optional[int] = None,
+                 vertical_margin: Optional[int] = None):
         """
         初始化卡拉OK生成器
 
@@ -38,8 +39,9 @@ class KaraokeGenerator:
             words_per_line: 每行显示的单词数 (1-20)
             max_line_duration_ms: 每行最大持续时间（毫秒）
             fontsize: 自定义字体大小（可选，None则使用默认大小）
+            vertical_margin: 自定义垂直边距/距底部像素（可选，None则使用默认值）
         """
-        self.style: KaraokeStyle = get_style(style_name, fontsize=fontsize)
+        self.style: KaraokeStyle = get_style(style_name, fontsize=fontsize, vertical_margin=vertical_margin)
         self.words_per_line = max(1, min(20, words_per_line))
         self.max_line_duration_ms = max_line_duration_ms
 
@@ -254,7 +256,8 @@ def create_karaoke_subtitles(subs: SSAFile,
                              style_name: str = "classic",
                              words_per_line: int = 10,
                              max_line_duration_ms: int = 5000,
-                             fontsize: Optional[int] = None) -> SSAFile:
+                             fontsize: Optional[int] = None,
+                             vertical_margin: Optional[int] = None) -> SSAFile:
     """
     便捷函数：创建卡拉OK字幕
 
@@ -264,6 +267,7 @@ def create_karaoke_subtitles(subs: SSAFile,
         words_per_line: 每行显示的单词数 (1-20)
         max_line_duration_ms: 每行最大持续时间（毫秒）
         fontsize: 自定义字体大小（可选，None则使用默认大小）
+        vertical_margin: 自定义垂直边距/距底部像素（可选，None则使用默认值）
 
     Returns:
         带卡拉OK效果的SSAFile对象
@@ -272,7 +276,8 @@ def create_karaoke_subtitles(subs: SSAFile,
         style_name=style_name,
         words_per_line=words_per_line,
         max_line_duration_ms=max_line_duration_ms,
-        fontsize=fontsize
+        fontsize=fontsize,
+        vertical_margin=vertical_margin
     )
     return generator.generate(subs)
 

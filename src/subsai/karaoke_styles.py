@@ -36,12 +36,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 class KaraokeStyle:
     """卡拉OK样式基类"""
 
-    def __init__(self, style_id: int, name: str, description: str, style_key: str = "", fontsize: Optional[int] = None):
+    def __init__(self, style_id: int, name: str, description: str, style_key: str = "", fontsize: Optional[int] = None, vertical_margin: Optional[int] = None):
         self.style_id = style_id
         self.name = name
         self.description = description
         self.style_key = style_key  # ASS样式名称（如 "Classic", "Modern"）
         self.custom_fontsize = fontsize  # 自定义字体大小
+        self.custom_vertical_margin = vertical_margin  # 自定义垂直边距（距底部像素）
 
     def get_default_fontsize(self) -> int:
         """返回默认字体大小"""
@@ -50,6 +51,14 @@ class KaraokeStyle:
     def get_fontsize(self) -> int:
         """获取实际使用的字体大小"""
         return self.custom_fontsize if self.custom_fontsize is not None else self.get_default_fontsize()
+
+    def get_default_vertical_margin(self) -> int:
+        """返回默认垂直边距（距底部像素）"""
+        raise NotImplementedError
+
+    def get_vertical_margin(self) -> int:
+        """获取实际使用的垂直边距"""
+        return self.custom_vertical_margin if self.custom_vertical_margin is not None else self.get_default_vertical_margin()
 
     def get_ass_style_line(self) -> str:
         """返回ASS样式定义行"""
@@ -75,17 +84,21 @@ class KaraokeStyle:
 class ClassicStyle(KaraokeStyle):
     """经典风格 - 传统KTV样式，黄色高亮，下方居中"""
 
-    def __init__(self, fontsize: Optional[int] = None):
+    def __init__(self, fontsize: Optional[int] = None, vertical_margin: Optional[int] = None):
         super().__init__(
             style_id=1,
             name="经典风格 Classic",
             description="传统KTV卡拉OK样式，黄色高亮，下方居中显示",
             style_key="Classic",
-            fontsize=fontsize
+            fontsize=fontsize,
+            vertical_margin=vertical_margin
         )
 
     def get_default_fontsize(self) -> int:
         return 48
+
+    def get_default_vertical_margin(self) -> int:
+        return 120
 
     def get_ass_style_line(self) -> str:
         # Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
@@ -94,7 +107,8 @@ class ClassicStyle(KaraokeStyle):
         # OutlineColour: 黑色边框 &H00000000
         # Alignment: 2 = 底部居中
         fontsize = self.get_fontsize()
-        return f"Style: Classic,Microsoft YaHei,{fontsize},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,2,2,30,30,120,1"
+        vertical_margin = self.get_vertical_margin()
+        return f"Style: Classic,Microsoft YaHei,{fontsize},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,2,2,30,30,{vertical_margin},1"
 
     def get_ssa_style(self) -> SSAStyle:
         return SSAStyle(
@@ -118,31 +132,36 @@ class ClassicStyle(KaraokeStyle):
             alignment=2,  # 底部居中
             marginl=30,
             marginr=30,
-            marginv=120
+            marginv=self.get_vertical_margin()
         )
 
 
 class ModernStyle(KaraokeStyle):
     """现代风格 - 简约设计，橙色渐变，顶部居中"""
 
-    def __init__(self, fontsize: Optional[int] = None):
+    def __init__(self, fontsize: Optional[int] = None, vertical_margin: Optional[int] = None):
         super().__init__(
             style_id=2,
             name="现代风格 Modern",
             description="现代简约设计，橙色渐变高亮，顶部居中显示",
             style_key="Modern",
-            fontsize=fontsize
+            fontsize=fontsize,
+            vertical_margin=vertical_margin
         )
 
     def get_default_fontsize(self) -> int:
         return 52
+
+    def get_default_vertical_margin(self) -> int:
+        return 30
 
     def get_ass_style_line(self) -> str:
         # PrimaryColour: 白色 &H00FFFFFF
         # SecondaryColour: 橙色 &H00FF8C00
         # Alignment: 8 = 顶部居中
         fontsize = self.get_fontsize()
-        return f"Style: Modern,Microsoft YaHei,{fontsize},&H00FFFFFF,&H00FF8C00,&H00000000,&H80000000,-1,0,0,0,100,100,2,0,1,2,1,8,30,30,30,1"
+        vertical_margin = self.get_vertical_margin()
+        return f"Style: Modern,Microsoft YaHei,{fontsize},&H00FFFFFF,&H00FF8C00,&H00000000,&H80000000,-1,0,0,0,100,100,2,0,1,2,1,8,30,30,{vertical_margin},1"
 
     def get_ssa_style(self) -> SSAStyle:
         return SSAStyle(
@@ -166,24 +185,28 @@ class ModernStyle(KaraokeStyle):
             alignment=8,  # 顶部居中
             marginl=30,
             marginr=30,
-            marginv=30
+            marginv=self.get_vertical_margin()
         )
 
 
 class NeonStyle(KaraokeStyle):
     """霓虹风格 - 赛博朋克效果，紫红色光晕"""
 
-    def __init__(self, fontsize: Optional[int] = None):
+    def __init__(self, fontsize: Optional[int] = None, vertical_margin: Optional[int] = None):
         super().__init__(
             style_id=3,
             name="霓虹风格 Neon",
             description="赛博朋克霓虹效果，紫红色光晕，中部居中",
             style_key="Neon",
-            fontsize=fontsize
+            fontsize=fontsize,
+            vertical_margin=vertical_margin
         )
 
     def get_default_fontsize(self) -> int:
         return 50
+
+    def get_default_vertical_margin(self) -> int:
+        return 80
 
     def get_ass_style_line(self) -> str:
         # PrimaryColour: 白色 &H00FFFFFF
@@ -191,7 +214,8 @@ class NeonStyle(KaraokeStyle):
         # OutlineColour: 紫红色边框 &H00FF00FF
         # Alignment: 5 = 中部居中
         fontsize = self.get_fontsize()
-        return f"Style: Neon,Microsoft YaHei,{fontsize},&H00FFFFFF,&H00FF00FF,&H00FF00FF,&H80FF00FF,-1,0,0,0,100,100,1,0,1,4,4,5,30,30,80,1"
+        vertical_margin = self.get_vertical_margin()
+        return f"Style: Neon,Microsoft YaHei,{fontsize},&H00FFFFFF,&H00FF00FF,&H00FF00FF,&H80FF00FF,-1,0,0,0,100,100,1,0,1,4,4,5,30,30,{vertical_margin},1"
 
     def get_ssa_style(self) -> SSAStyle:
         return SSAStyle(
@@ -215,24 +239,28 @@ class NeonStyle(KaraokeStyle):
             alignment=5,  # 中部居中
             marginl=30,
             marginr=30,
-            marginv=80
+            marginv=self.get_vertical_margin()
         )
 
 
 class ElegantStyle(KaraokeStyle):
     """优雅风格 - 金色柔和动画"""
 
-    def __init__(self, fontsize: Optional[int] = None):
+    def __init__(self, fontsize: Optional[int] = None, vertical_margin: Optional[int] = None):
         super().__init__(
             style_id=4,
             name="优雅风格 Elegant",
             description="优雅字体，金色柔和动画，下方居中",
             style_key="Elegant",
-            fontsize=fontsize
+            fontsize=fontsize,
+            vertical_margin=vertical_margin
         )
 
     def get_default_fontsize(self) -> int:
         return 46
+
+    def get_default_vertical_margin(self) -> int:
+        return 100
 
     def get_ass_style_line(self) -> str:
         # PrimaryColour: 白色 &H00FFFFFF
@@ -240,7 +268,8 @@ class ElegantStyle(KaraokeStyle):
         # ScaleX: 105 (稍微拉宽)
         # Alignment: 2 = 底部居中
         fontsize = self.get_fontsize()
-        return f"Style: Elegant,Microsoft YaHei,{fontsize},&H00FFFFFF,&H00FFD700,&H00000000,&H80000000,-1,0,0,0,105,100,1,0,1,2,2,2,30,30,100,1"
+        vertical_margin = self.get_vertical_margin()
+        return f"Style: Elegant,Microsoft YaHei,{fontsize},&H00FFFFFF,&H00FFD700,&H00000000,&H80000000,-1,0,0,0,105,100,1,0,1,2,2,2,30,30,{vertical_margin},1"
 
     def get_ssa_style(self) -> SSAStyle:
         return SSAStyle(
@@ -264,24 +293,28 @@ class ElegantStyle(KaraokeStyle):
             alignment=2,  # 底部居中
             marginl=30,
             marginr=30,
-            marginv=100
+            marginv=self.get_vertical_margin()
         )
 
 
 class AnimeStyle(KaraokeStyle):
     """动漫风格 - 青色描边效果"""
 
-    def __init__(self, fontsize: Optional[int] = None):
+    def __init__(self, fontsize: Optional[int] = None, vertical_margin: Optional[int] = None):
         super().__init__(
             style_id=5,
             name="动漫风格 Anime",
             description="动漫字幕风格，青色描边效果，下方居中",
             style_key="Anime",
-            fontsize=fontsize
+            fontsize=fontsize,
+            vertical_margin=vertical_margin
         )
 
     def get_default_fontsize(self) -> int:
         return 44
+
+    def get_default_vertical_margin(self) -> int:
+        return 110
 
     def get_ass_style_line(self) -> str:
         # PrimaryColour: 白色 &H00FFFFFF
@@ -289,7 +322,8 @@ class AnimeStyle(KaraokeStyle):
         # Outline: 4 (粗边框)
         # Alignment: 2 = 底部居中
         fontsize = self.get_fontsize()
-        return f"Style: Anime,Microsoft YaHei,{fontsize},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,3,2,30,30,110,1"
+        vertical_margin = self.get_vertical_margin()
+        return f"Style: Anime,Microsoft YaHei,{fontsize},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,3,2,30,30,{vertical_margin},1"
 
     def get_ssa_style(self) -> SSAStyle:
         return SSAStyle(
@@ -313,7 +347,7 @@ class AnimeStyle(KaraokeStyle):
             alignment=2,  # 底部居中
             marginl=30,
             marginr=30,
-            marginv=110
+            marginv=self.get_vertical_margin()
         )
 
 
@@ -335,19 +369,20 @@ STYLE_NAMES: Dict[str, str] = {
 }
 
 
-def get_style(style_name: str, fontsize: Optional[int] = None) -> KaraokeStyle:
+def get_style(style_name: str, fontsize: Optional[int] = None, vertical_margin: Optional[int] = None) -> KaraokeStyle:
     """
     获取指定样式实例
 
     Args:
         style_name: 样式名称 (classic, modern, neon, elegant, anime)
         fontsize: 自定义字体大小 (可选)
+        vertical_margin: 自定义垂直边距/距底部像素 (可选)
 
     Returns:
         KaraokeStyle实例
     """
     style_class = STYLE_CLASSES.get(style_name.lower(), ClassicStyle)
-    return style_class(fontsize=fontsize)
+    return style_class(fontsize=fontsize, vertical_margin=vertical_margin)
 
 
 def get_all_styles(fontsize: Optional[int] = None) -> Dict[str, KaraokeStyle]:
