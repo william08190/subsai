@@ -619,6 +619,19 @@ def webui() -> None:
             else:
                 font_size = None
 
+            # 添加字幕垂直位置控制
+            use_custom_position = st.checkbox('Custom Vertical Position', value=False, help='启用自定义字幕垂直位置（否则使用样式默认位置）')
+            if use_custom_position:
+                vertical_margin = st.slider(
+                    'Distance from Bottom (pixels)',
+                    min_value=10,
+                    max_value=200,
+                    value=50,
+                    help='字幕距底部的像素距离（值越小越靠近底部边缘）'
+                )
+            else:
+                vertical_margin = None
+
             # 使用当前字幕生成卡拉OK视频
             media_file = Path(file_path)
             karaoke_output_filename = st.text_input(
@@ -638,12 +651,13 @@ def webui() -> None:
                             subs = st.session_state['transcribed_subs']
 
                             # 生成卡拉OK字幕
-                            st.info(f"📝 Converting to karaoke format (style: {selected_style}, fontsize: {font_size or 'default'})...")
+                            st.info(f"📝 Converting to karaoke format (style: {selected_style}, fontsize: {font_size or 'default'}, position: {vertical_margin or 'default'}px)...")
                             karaoke_subs = create_karaoke_subtitles(
                                 subs=subs,
                                 style_name=selected_style,
                                 words_per_line=words_per_line,
-                                fontsize=font_size
+                                fontsize=font_size,
+                                vertical_margin=vertical_margin
                             )
 
                             if karaoke_subs is None or len(karaoke_subs) == 0:
