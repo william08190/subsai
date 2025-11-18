@@ -33,7 +33,8 @@ class KaraokeGenerator:
                  vertical_margin: Optional[int] = None,
                  fontname: Optional[str] = None,
                  primary_color: Optional[str] = None,
-                 secondary_color: Optional[str] = None):
+                 secondary_color: Optional[str] = None,
+                 max_line_width_px: Optional[int] = None):
         """
         初始化卡拉OK生成器
 
@@ -46,6 +47,7 @@ class KaraokeGenerator:
             fontname: 自定义字体名称（可选，None则使用默认字体）
             primary_color: 自定义基础颜色 Hex格式如"#FFFFFF"（可选）
             secondary_color: 自定义高亮颜色 Hex格式如"#FFD700"（可选）
+            max_line_width_px: 单行最大宽度（像素），用于自动换行（可选，None则不限制）
         """
         self.style: KaraokeStyle = get_style(
             style_name,
@@ -57,6 +59,7 @@ class KaraokeGenerator:
         )
         self.words_per_line = max(1, min(20, words_per_line))
         self.max_line_duration_ms = max_line_duration_ms
+        self.max_line_width_px = max_line_width_px
 
     def _extract_word_timings(self, subs: SSAFile) -> List[Dict[str, Any]]:
         """
@@ -140,22 +143,50 @@ class KaraokeGenerator:
 
         return lines
 
+    def _estimate_text_width(self, text: str) -> float:
+        """
+        估算文本宽度（像素）
+
+        Args:
+            text: 文本内容
+
+        Returns:
+            估算的宽度（像素）
+        """
+        fontsize = self.style.get_fontsize()
+        width = 0.0
+
+        for char in text:
+            if '\u4e00' <= char <= '\u9fff':  # 中文字符
+                width += fontsize * 1.0
+            elif char == ' ':  # 空格
+                width += fontsize * 0.3
+            else:  # 英文和其他字符
+                width += fontsize * 0.6
+
+        return width
+
     def _create_karaoke_tags(self, words: List[Dict[str, Any]]) -> str:
         """
-        为一行单词创建卡拉OK标签
+        为一行单词创建卡拉OK标签（支持自动换行）
 
         Args:
             words: 单词列表（带时间戳）
 
         Returns:
-            带\\k标签的ASS格式文本
+            带\\k标签的ASS格式文本（可能包含\\N换行符）
         """
         if not words:
             return ""
 
+        # 如果启用了自动换行，使用智能换行逻辑
+        if self.max_line_width_px and self.max_line_width_px > 0:
+            return self._create_karaoke_tags_with_wrap(words)
+
+        # 原有逻辑：不换行
         result = []
 
-        for word in words:
+        for i, word in enumerate(words):
             # 计算持续时间（厘秒，1秒=100厘秒）
             duration_ms = word["end"] - word["start"]
             duration_cs = max(1, duration_ms // 10)  # 至少1厘秒
@@ -163,8 +194,64 @@ class KaraokeGenerator:
             # 生成\\k标签
             karaoke_tag = self.style.get_karaoke_tags(duration_cs)
 
-            # 添加单词和空格
+            # 添加单词
             result.append(f"{karaoke_tag}{word['word']}")
+
+            # 在单词之间添加空格（最后一个单词除外）
+            if i < len(words) - 1:
+                result.append(" ")
+
+        return "".join(result)
+
+    def _create_karaoke_tags_with_wrap(self, words: List[Dict[str, Any]]) -> str:
+        """
+        为一行单词创建卡拉OK标签（带自动换行和居中对齐）
+
+        Args:
+            words: 单词列表（带时间戳）
+
+        Returns:
+            带\\k标签和\\N换行符的ASS格式文本，居中对齐
+        """
+        if not words:
+            return ""
+
+        # 添加居中对齐标签
+        result = ["{\\an5}"]  # \an5 = 居中对齐
+
+        current_line_width = 0.0
+        # 保留20%的边距（左右各10%）
+        max_width = self.max_line_width_px * 0.8
+
+        for i, word in enumerate(words):
+            # 计算持续时间（厘秒，1秒=100厘秒）
+            duration_ms = word["end"] - word["start"]
+            duration_cs = max(1, duration_ms // 10)
+
+            # 生成\\k标签
+            karaoke_tag = self.style.get_karaoke_tags(duration_cs)
+
+            # 计算单词宽度（包括前面的空格）
+            word_text = word['word']
+            word_width = self._estimate_text_width(word_text)
+
+            # 如果不是第一个单词，需要加上空格的宽度
+            space_width = self._estimate_text_width(" ") if i > 0 else 0
+
+            # 检查是否需要换行（不是第一个单词，且加上新单词会超宽）
+            if i > 0 and current_line_width + space_width + word_width > max_width:
+                # 换行
+                result.append("\\N")
+                current_line_width = 0
+
+            # 添加空格（除了第一个单词和换行后的第一个单词）
+            if i > 0 and current_line_width > 0:
+                result.append(" ")
+                current_line_width += space_width
+
+            # 添加单词
+            result.append(f"{karaoke_tag}{word_text}")
+            current_line_width += word_width
 
         return "".join(result)
 
@@ -273,7 +360,8 @@ def create_karaoke_subtitles(subs: SSAFile,
                              vertical_margin: Optional[int] = None,
                              fontname: Optional[str] = None,
                              primary_color: Optional[str] = None,
-                             secondary_color: Optional[str] = None) -> SSAFile:
+                             secondary_color: Optional[str] = None,
+                             max_line_width_px: Optional[int] = None) -> SSAFile:
     """
     便捷函数：创建卡拉OK字幕
 
@@ -287,6 +375,7 @@ def create_karaoke_subtitles(subs: SSAFile,
         fontname: 自定义字体名称（可选，None则使用默认字体）
         primary_color: 自定义基础颜色 Hex格式如"#FFFFFF"（可选）
         secondary_color: 自定义高亮颜色 Hex格式如"#FFD700"（可选）
+        max_line_width_px: 单行最大宽度（像素），用于自动换行和居中（可选，None则不换行）
 
     Returns:
         带卡拉OK效果的SSAFile对象
@@ -299,7 +388,8 @@ def create_karaoke_subtitles(subs: SSAFile,
         vertical_margin=vertical_margin,
         fontname=fontname,
         primary_color=primary_color,
-        secondary_color=secondary_color
+        secondary_color=secondary_color,
+        max_line_width_px=max_line_width_px
     )
     return generator.generate(subs)
 

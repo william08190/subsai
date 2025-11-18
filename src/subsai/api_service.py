@@ -234,6 +234,24 @@ async def process_video_job(job_id: str, video_files: List[Path], config: Proces
                     primary_color = config.custom_colors.get('primary')
                     secondary_color = config.custom_colors.get('highlight')
 
+                # 计算视频宽度（用于自动换行）
+                max_line_width_px = None
+                if config.aspect_ratio and config.aspect_ratio.lower() != 'original':
+                    try:
+                        # 常见宽高比对应的宽度（基于1080p高度）
+                        aspect_widths = {
+                            '16:9': 1920,
+                            '9:16': 607,
+                            '4:3': 1440,
+                            '1:1': 1080,
+                            '21:9': 2520
+                        }
+                        max_line_width_px = aspect_widths.get(config.aspect_ratio, 1920)
+                        logger.info(f"根据宽高比 {config.aspect_ratio} 计算视频宽度: {max_line_width_px}px，将启用自动换行")
+                    except Exception as e:
+                        logger.warning(f"计算视频宽度失败: {e}，将不限制行宽")
+                        max_line_width_px = None
+
                 karaoke_subs = create_karaoke_subtitles(
                     subs=subs,
                     style_name=config.style_name,
@@ -242,7 +260,8 @@ async def process_video_job(job_id: str, video_files: List[Path], config: Proces
                     vertical_margin=config.vertical_margin,
                     fontname=config.custom_font,
                     primary_color=primary_color,
-                    secondary_color=secondary_color
+                    secondary_color=secondary_color,
+                    max_line_width_px=max_line_width_px
                 )
 
                 if not karaoke_subs or len(karaoke_subs) == 0:
