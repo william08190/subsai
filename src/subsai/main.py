@@ -448,13 +448,14 @@ class Tools:
 
             # Build ffmpeg command manually for better control over parameter order
             # Using system ffmpeg (from apt) which supports libx264 and subtitles filter
+            # Use /usr/bin/ffmpeg explicitly to avoid conda's limited ffmpeg
             import subprocess
 
             # Construct ffmpeg command with proper parameter order
             ffmpeg_cmd = [
-                'ffmpeg',
+                '/usr/bin/ffmpeg',  # Use system ffmpeg explicitly
                 '-i', media_file,
-                '-vf', f'subtitles={ass_temp.name}',  # ASS subtitle filter
+                '-vf', f'ass={ass_temp.name}',  # ASS filter for karaoke effects (\k tags)
                 '-c:v', video_codec,  # Use libx264 (supported by system ffmpeg)
                 '-crf', str(crf),  # CRF quality control
                 '-preset', 'medium',
