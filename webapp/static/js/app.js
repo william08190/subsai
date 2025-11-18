@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadConfig();
     await loadStyles();
     await loadRatios();
+    initColorPickers();
     initButtons();
 });
 
@@ -265,6 +266,39 @@ async function loadRatios() {
     }
 }
 
+// 初始化颜色选择器
+function initColorPickers() {
+    // 主颜色同步
+    const primaryColor = document.getElementById('primaryColor');
+    const primaryColorHex = document.getElementById('primaryColorHex');
+
+    primaryColor.addEventListener('input', (e) => {
+        primaryColorHex.value = e.target.value.toUpperCase();
+    });
+
+    primaryColorHex.addEventListener('input', (e) => {
+        const hex = e.target.value.trim();
+        if (/^#[0-9A-F]{6}$/i.test(hex)) {
+            primaryColor.value = hex.toUpperCase();
+        }
+    });
+
+    // 高亮颜色同步
+    const highlightColor = document.getElementById('highlightColor');
+    const highlightColorHex = document.getElementById('highlightColorHex');
+
+    highlightColor.addEventListener('input', (e) => {
+        highlightColorHex.value = e.target.value.toUpperCase();
+    });
+
+    highlightColorHex.addEventListener('input', (e) => {
+        const hex = e.target.value.trim();
+        if (/^#[0-9A-F]{6}$/i.test(hex)) {
+            highlightColor.value = hex.toUpperCase();
+        }
+    });
+}
+
 // 初始化按钮
 function initButtons() {
     // 开始处理
@@ -290,14 +324,31 @@ async function startProcess() {
     }
 
     // 收集配置（使用新的 ProcessConfig 格式）
+    const fontName = document.getElementById('fontName').value || null;
+    const fontSize = document.getElementById('fontSize').value || null;
+    const whisperModel = document.getElementById('whisperModel').value || null;
+    const wordsPerLine = parseInt(document.getElementById('wordsPerLine').value) || 10;
+    const verticalMargin = document.getElementById('verticalMargin').value || null;
+
+    // 收集颜色（如果用户修改了默认值）
+    const primaryColorHex = document.getElementById('primaryColorHex').value;
+    const highlightColorHex = document.getElementById('highlightColorHex').value;
+    const customColors = (primaryColorHex !== '#FFFFFF' || highlightColorHex !== '#FFD700') ? {
+        primary: primaryColorHex,
+        highlight: highlightColorHex
+    } : null;
+
     const config = {
         style_name: state.config.style_name || 'classic',
-        words_per_line: 10,
+        words_per_line: wordsPerLine,
         aspect_ratio: document.querySelector('input[name="aspect_ratio"]:checked').value,
-        fontsize: null,
-        vertical_margin: null,
-        model_name: "linto-ai/whisper-timestamped",
-        model_config: null  // 使用后端默认配置
+        fontsize: fontSize ? parseInt(fontSize) : null,
+        vertical_margin: verticalMargin ? parseInt(verticalMargin) : null,
+        model_name: whisperModel ? `linto-ai/whisper-timestamped` : "linto-ai/whisper-timestamped",
+        model_config: null,  // 使用后端默认配置
+        custom_font: fontName,
+        custom_colors: customColors,
+        whisper_model_type: whisperModel  // 传递模型类型到后端
     };
 
     const fileIds = state.uploadedFiles.map(f => f.id);

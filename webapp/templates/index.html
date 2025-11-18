@@ -105,7 +105,84 @@
                                     <div class="effect-grid" id="effectGrid">
                                         <!-- 动态加载 -->
                                     </div>
-                                    <p class="hint">选择卡拉OK字幕样式，字体和颜色已预设</p>
+                                    <p class="hint">选择卡拉OK字幕样式（可在下方自定义字体和颜色）</p>
+                                </div>
+
+                                <!-- 字体设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-font"></i> 字体设置（可选）</label>
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="fontName" style="font-size: 0.875rem; color: #718096;">字体名称</label>
+                                            <select id="fontName" class="form-control">
+                                                <option value="">使用样式默认字体</option>
+                                                <option value="Microsoft YaHei">微软雅黑</option>
+                                                <option value="SimHei">黑体</option>
+                                                <option value="SimSun">宋体</option>
+                                                <option value="KaiTi">楷体</option>
+                                                <option value="Arial">Arial</option>
+                                                <option value="Arial Black">Arial Black</option>
+                                                <option value="Impact">Impact</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="fontSize" style="font-size: 0.875rem; color: #718096;">字体大小(px)</label>
+                                            <input type="number" id="fontSize" class="form-control" min="20" max="100" step="2" placeholder="默认">
+                                        </div>
+                                    </div>
+                                    <p class="hint">留空则使用所选卡拉OK样式的默认字体设置</p>
+                                </div>
+
+                                <!-- 颜色设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-palette"></i> 颜色设置（可选）</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="primaryColor" style="font-size: 0.875rem; color: #718096;">基础颜色</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                <input type="color" id="primaryColor" value="#FFFFFF" style="width: 60px; height: 40px; border: 2px solid #e2e8f0; border-radius: 4px; cursor: pointer;">
+                                                <input type="text" id="primaryColorHex" class="form-control" value="#FFFFFF" placeholder="#FFFFFF" style="flex: 1;">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="highlightColor" style="font-size: 0.875rem; color: #718096;">高亮颜色</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                <input type="color" id="highlightColor" value="#FFD700" style="width: 60px; height: 40px; border: 2px solid #e2e8f0; border-radius: 4px; cursor: pointer;">
+                                                <input type="text" id="highlightColorHex" class="form-control" value="#FFD700" placeholder="#FFD700" style="flex: 1;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="hint">留空则使用所选卡拉OK样式的默认颜色</p>
+                                </div>
+
+                                <!-- Whisper模型选择 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-microphone"></i> Whisper模型（可选）</label>
+                                    <select id="whisperModel" class="form-control">
+                                        <option value="">使用默认配置 (large-v3-turbo)</option>
+                                        <option value="base">base - 快速但准确度较低</option>
+                                        <option value="small">small - 平衡速度和准确度</option>
+                                        <option value="medium">medium - 较高准确度</option>
+                                        <option value="large-v2">large-v2 - 高准确度</option>
+                                        <option value="large-v3">large-v3 - 最高准确度</option>
+                                        <option value="large-v3-turbo">large-v3-turbo - 推荐（快速+高准确度）</option>
+                                    </select>
+                                    <p class="hint">留空则使用配置文件中的默认模型 (large-v3-turbo)</p>
+                                </div>
+
+                                <!-- 高级设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-cogs"></i> 高级设置（可选）</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="wordsPerLine" style="font-size: 0.875rem; color: #718096;">每行单词数</label>
+                                            <input type="number" id="wordsPerLine" class="form-control" min="3" max="20" value="10">
+                                        </div>
+                                        <div>
+                                            <label for="verticalMargin" style="font-size: 0.875rem; color: #718096;">字幕距底部距离(px)</label>
+                                            <input type="number" id="verticalMargin" class="form-control" min="10" max="200" placeholder="默认50">
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Whisper配置说明 -->
