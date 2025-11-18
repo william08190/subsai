@@ -330,6 +330,10 @@ async function startProcess() {
     const wordsPerLine = parseInt(document.getElementById('wordsPerLine').value) || 10;
     const verticalMargin = document.getElementById('verticalMargin').value || null;
 
+    // 收集视频质量参数
+    const videoQuality = parseInt(document.getElementById('videoQuality').value) || 18;
+    const encodeSpeed = document.getElementById('encodeSpeed').value || 'medium';
+
     // 收集颜色（如果用户修改了默认值）
     const primaryColorHex = document.getElementById('primaryColorHex').value;
     const highlightColorHex = document.getElementById('highlightColorHex').value;
@@ -344,6 +348,8 @@ async function startProcess() {
         aspect_ratio: document.querySelector('input[name="aspect_ratio"]:checked').value,
         fontsize: fontSize ? parseInt(fontSize) : null,
         vertical_margin: verticalMargin ? parseInt(verticalMargin) : null,
+        crf: videoQuality,
+        preset: encodeSpeed,
         model_name: whisperModel ? `linto-ai/whisper-timestamped` : "linto-ai/whisper-timestamped",
         model_config: null,  // 使用后端默认配置
         custom_font: fontName,

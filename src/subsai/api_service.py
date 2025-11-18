@@ -97,6 +97,8 @@ class ProcessConfig(BaseModel):
     vertical_margin: Optional[int] = None  # 垂直边距
     model_name: str = "linto-ai/whisper-timestamped"
     whisper_config: Optional[Dict[str, Any]] = None  # Whisper配置
+    crf: int = 18  # 视频质量 CRF 值 (0-51, 越低质量越高, 默认18高质量)
+    preset: str = "medium"  # 编码速度预设 (ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow)
 
 
 class JobStatus(BaseModel):
@@ -229,13 +231,15 @@ async def process_video_job(job_id: str, video_files: List[Path], config: Proces
                 logger.info(f"生成了 {len(karaoke_subs)} 个卡拉OK字幕事件")
 
                 # 3. 烧录到视频
-                logger.info(f"步骤3: 烧录字幕到视频...")
+                logger.info(f"步骤3: 烧录字幕到视频 (CRF={config.crf}, preset={config.preset})...")
                 output_filename = f"{video_path.stem}_karaoke"
                 output_path = tools.burn_karaoke_subtitles(
                     subs=karaoke_subs,
                     media_file=str(video_path),
                     output_filename=output_filename,
-                    aspect_ratio=config.aspect_ratio
+                    aspect_ratio=config.aspect_ratio,
+                    crf=config.crf,
+                    preset=config.preset
                 )
 
                 if os.path.exists(output_path):

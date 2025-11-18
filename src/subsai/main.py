@@ -380,7 +380,8 @@ class Tools:
                                media_file: str,
                                output_filename: str = None,
                                video_codec: str = 'libx264',
-                               crf: int = 23,
+                               crf: int = 18,
+                               preset: str = 'medium',
                                aspect_ratio: str = None) -> str:
         """
         Uses ffmpeg to burn ASS karaoke subtitles into video as hardcoded subtitles.
@@ -394,15 +395,19 @@ class Tools:
             # Generate karaoke subtitles
             karaoke_subs = create_karaoke_subtitles(original_subs, style_name='classic')
 
-            # Burn to video with aspect ratio cropping
-            output = Tools.burn_karaoke_subtitles(karaoke_subs, 'input.mp4', 'output_karaoke', aspect_ratio='9:16')
+            # Burn to video with aspect ratio cropping and quality settings
+            output = Tools.burn_karaoke_subtitles(
+                karaoke_subs, 'input.mp4', 'output_karaoke',
+                aspect_ratio='9:16', crf=18, preset='slow'
+            )
         ```
 
         :param subs: SSAFile object with ASS karaoke subtitles
         :param media_file: path of the video file
         :param output_filename: Output file name (without extension)
         :param video_codec: Video codec for encoding (default: libx264)
-        :param crf: Constant Rate Factor for quality (default: 23, lower = better quality)
+        :param crf: Constant Rate Factor for quality (default: 18, range 0-51, lower = better quality)
+        :param preset: Encoding speed preset (default: medium, options: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow)
         :param aspect_ratio: Target aspect ratio for cropping (e.g., '16:9', '9:16', '4:3', '1:1', None=original)
 
         :return: Absolute path of the output file
@@ -514,7 +519,7 @@ class Tools:
                 '-vf', video_filter,  # Video filter chain (crop + ASS)
                 '-c:v', video_codec,  # Use libx264 (supported by system ffmpeg)
                 '-crf', str(crf),  # CRF quality control
-                '-preset', 'medium',
+                '-preset', preset,  # Encoding speed preset (configurable)
                 '-c:a', 'copy',  # Copy audio without re-encoding
                 '-y',
                 output_file

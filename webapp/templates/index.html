@@ -185,6 +185,38 @@
                                     </div>
                                 </div>
 
+                                <!-- 视频质量设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-video"></i> 视频质量设置</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="videoQuality" style="font-size: 0.875rem; color: #718096;">视频质量</label>
+                                            <select id="videoQuality" class="form-control">
+                                                <option value="18">极高质量 (CRF 18) - 推荐</option>
+                                                <option value="20">高质量 (CRF 20)</option>
+                                                <option value="23">标准质量 (CRF 23)</option>
+                                                <option value="26">中等质量 (CRF 26)</option>
+                                                <option value="28">较低质量 (CRF 28)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="encodeSpeed" style="font-size: 0.875rem; color: #718096;">编码速度</label>
+                                            <select id="encodeSpeed" class="form-control">
+                                                <option value="ultrafast">超快速 (文件较大)</option>
+                                                <option value="superfast">极快速</option>
+                                                <option value="veryfast">很快速</option>
+                                                <option value="faster">较快速</option>
+                                                <option value="fast">快速</option>
+                                                <option value="medium" selected>中速 (推荐)</option>
+                                                <option value="slow">慢速 (质量更好)</option>
+                                                <option value="slower">很慢速</option>
+                                                <option value="veryslow">极慢速 (最佳质量)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p class="hint">CRF值越低质量越高但文件越大。编码速度越慢质量越好但处理时间越长。</p>
+                                </div>
+
                                 <!-- Whisper配置说明 -->
                                 <div class="form-group">
                                     <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
