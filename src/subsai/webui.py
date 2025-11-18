@@ -272,7 +272,21 @@ def webui() -> None:
     st.markdown(
         "### Subtitles generation tool powered by OpenAI's [Whisper](https://github.com/openai/whisper) and its "
         "variants.")
+
+    # 添加批量处理界面跳转按钮
     st.sidebar.title("Settings")
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### 🎵 批量处理界面")
+        st.markdown("想要批量处理多个视频？试试新的批量处理界面！")
+        if st.button("🚀 打开批量处理界面", type="primary", use_container_width=True):
+            st.markdown("""
+            <script>
+                window.open('http://localhost:8001', '_blank');
+            </script>
+            """, unsafe_allow_html=True)
+        st.info("批量处理界面运行在端口 8001\n\n特点：\n- 多文件上传\n- 实时进度追踪\n- 任务队列管理\n- 自动语音识别")
+        st.markdown("---")
     st.info(
         "This is an open source project and you are very welcome to **contribute** your awesome "
         "comments, questions, ideas through "

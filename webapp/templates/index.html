@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 自动化歌词视频处理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航栏 -->
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <i class="fas fa-music"></i>
+                    <h1>自动化歌词视频处理系统</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="upload">
+                        <i class="fas fa-upload"></i> 上传视频
+                    </button>
+                    <button class="nav-btn" data-tab="process">
+                        <i class="fas fa-cog"></i> 处理设置
+                    </button>
+                    <button class="nav-btn" data-tab="jobs">
+                        <i class="fas fa-tasks"></i> 任务列表
+                    </button>
+                    <button class="nav-btn" data-tab="downloads">
+                        <i class="fas fa-download"></i> 下载中心
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main">
+            <div class="container">
+
+                <!-- 上传视频标签页 -->
+                <section id="upload-tab" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-cloud-upload-alt"></i> 上传视频文件</h2>
+                            <p class="subtitle">支持格式：MP4, MKV, AVI, MOV, WEBM</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="upload-area" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h3>拖拽视频文件到这里</h3>
+                                <p>或者</p>
+                                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                    <i class="fas fa-folder-open"></i> 选择文件
+                                </button>
+                                <input type="file" id="fileInput" multiple accept="video/*" style="display: none;">
+                                <p class="hint">可以一次选择多个视频文件</p>
+                            </div>
+
+                            <!-- 文件列表 -->
+                            <div id="fileList" class="file-list" style="display: none;">
+                                <h3>已选择的文件</h3>
+                                <div id="fileItems"></div>
+                                <div class="actions">
+                                    <button class="btn btn-success" id="uploadBtn">
+                                        <i class="fas fa-upload"></i> 上传所有文件
+                                    </button>
+                                    <button class="btn btn-secondary" id="clearBtn">
+                                        <i class="fas fa-trash"></i> 清空列表
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 上传进度 -->
+                            <div id="uploadProgress" class="upload-progress" style="display: none;">
+                                <h3>上传中...</h3>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="uploadProgressBar"></div>
+                                </div>
+                                <p id="uploadStatus">准备上传...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 处理设置标签页 -->
+                <section id="process-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-sliders-h"></i> 处理设置</h2>
+                            <p class="subtitle">自定义您的歌词视频样式</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="configForm">
+                                <!-- 视频比例 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-expand"></i> 视频比例</label>
+                                    <div class="radio-group" id="ratioGroup">
+                                        <!-- 动态加载 -->
+                                    </div>
+                                </div>
+
+                                <!-- 卡拉OK效果 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-magic"></i> 卡拉OK样式</label>
+                                    <div class="effect-grid" id="effectGrid">
+                                        <!-- 动态加载 -->
+                                    </div>
+                                    <p class="hint">选择卡拉OK字幕样式，字体和颜色已预设</p>
+                                </div>
+
+                                <!-- Whisper配置说明 -->
+                                <div class="form-group">
+                                    <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
+                                        <p style="margin: 0; color: #1976D2;">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>AI语音识别：</strong>使用 Whisper large-v3-turbo 模型，支持自动语言检测和词级时间戳
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="actions">
+                                    <button type="button" class="btn btn-success" id="startProcessBtn">
+                                        <i class="fas fa-play"></i> 开始处理
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" id="resetConfigBtn">
+                                        <i class="fas fa-undo"></i> 重置默认
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 任务列表标签页 -->
+                <section id="jobs-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-tasks"></i> 处理任务</h2>
+                            <button class="btn btn-sm btn-primary" id="refreshJobsBtn">
+                                <i class="fas fa-sync"></i> 刷新
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="jobsList"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 下载中心标签页 -->
+                <section id="downloads-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-download"></i> 下载中心</h2>
+                            <p class="subtitle">所有已完成的歌词视频</p>
+                        </div>
+                        <div class="card-body">
+                            <div id="downloadsList"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- 底部信息 -->
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2025 自动化歌词视频处理系统 | Powered by FastAPI + Vue.js</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast通知 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 脚本 -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
