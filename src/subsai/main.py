@@ -380,7 +380,8 @@ class Tools:
                                media_file: str,
                                output_filename: str = None,
                                video_codec: str = 'libx264',
-                               crf: int = 23) -> str:
+                               crf: int = 23,
+                               aspect_ratio: str = None) -> str:
         """
         Uses ffmpeg to burn ASS karaoke subtitles into video as hardcoded subtitles.
         This method preserves ASS karaoke effects (\k tags) by using the subtitles filter.
@@ -393,8 +394,8 @@ class Tools:
             # Generate karaoke subtitles
             karaoke_subs = create_karaoke_subtitles(original_subs, style_name='classic')
 
-            # Burn to video
-            output = Tools.burn_karaoke_subtitles(karaoke_subs, 'input.mp4', 'output_karaoke')
+            # Burn to video with aspect ratio cropping
+            output = Tools.burn_karaoke_subtitles(karaoke_subs, 'input.mp4', 'output_karaoke', aspect_ratio='9:16')
         ```
 
         :param subs: SSAFile object with ASS karaoke subtitles
@@ -402,6 +403,7 @@ class Tools:
         :param output_filename: Output file name (without extension)
         :param video_codec: Video codec for encoding (default: libx264)
         :param crf: Constant Rate Factor for quality (default: 23, lower = better quality)
+        :param aspect_ratio: Target aspect ratio for cropping (e.g., '16:9', '9:16', '4:3', '1:1', None=original)
 
         :return: Absolute path of the output file
         """
@@ -409,9 +411,54 @@ class Tools:
         logger = logging.getLogger(__name__)
 
         logger.info(f"🎤 开始烧录卡拉OK字幕: {media_file}")
+        if aspect_ratio:
+            logger.info(f"📐 ���标宽高比: {aspect_ratio}")
 
         metadata = ffmpeg.probe(media_file, select_streams="v")['streams'][0]
         assert metadata['codec_type'] == 'video', f'File {media_file} is not a video'
+
+        # Get original video dimensions
+        original_width = int(metadata['width'])
+        original_height = int(metadata['height'])
+        logger.info(f"📺 原始视频尺寸: {original_width}x{original_height}")
+
+        # Calculate crop parameters if aspect ratio is specified
+        crop_filter = None
+        if aspect_ratio and aspect_ratio.lower() != 'original':
+            try:
+                # Parse target aspect ratio
+                target_w, target_h = map(int, aspect_ratio.split(':'))
+                target_ratio = target_w / target_h
+                original_ratio = original_width / original_height
+
+                logger.info(f"🎯 目标宽高比: {target_ratio:.3f} (原始: {original_ratio:.3f})")
+
+                if abs(target_ratio - original_ratio) > 0.01:  # Only crop if ratios differ
+                    # Calculate crop dimensions
+                    if original_ratio > target_ratio:
+                        # Original is wider, crop width
+                        crop_height = original_height
+                        crop_width = int(original_height * target_ratio)
+                    else:
+                        # Original is taller, crop height
+                        crop_width = original_width
+                        crop_height = int(original_width / target_ratio)
+
+                    # Ensure even dimensions (required for many codecs)
+                    crop_width = crop_width - (crop_width % 2)
+                    crop_height = crop_height - (crop_height % 2)
+
+                    # Calculate crop position (center crop)
+                    crop_x = (original_width - crop_width) // 2
+                    crop_y = (original_height - crop_height) // 2
+
+                    crop_filter = f"crop={crop_width}:{crop_height}:{crop_x}:{crop_y}"
+                    logger.info(f"✂️  裁剪参数: {crop_filter} (输出尺寸: {crop_width}x{crop_height})")
+                else:
+                    logger.info(f"ℹ️  视频已经是目标宽高比，无需裁剪")
+            except (ValueError, ZeroDivisionError) as e:
+                logger.warning(f"⚠️  无效的���高比格式 '{aspect_ratio}'，将使用原始尺寸: {e}")
+                crop_filter = None
 
         # Create temporary ASS file
         ass_temp = tempfile.NamedTemporaryFile(mode='w', suffix='.ass', delete=False, encoding='utf-8')
@@ -451,11 +498,20 @@ class Tools:
             # Use /usr/bin/ffmpeg explicitly to avoid conda's limited ffmpeg
             import subprocess
 
+            # Construct video filter chain
+            # If crop is needed, apply it before ASS subtitles
+            if crop_filter:
+                video_filter = f"{crop_filter},ass={ass_temp.name}"
+            else:
+                video_filter = f"ass={ass_temp.name}"
+
+            logger.info(f"🎨 视频滤镜链: {video_filter}")
+
             # Construct ffmpeg command with proper parameter order
             ffmpeg_cmd = [
                 '/usr/bin/ffmpeg',  # Use system ffmpeg explicitly
                 '-i', media_file,
-                '-vf', f'ass={ass_temp.name}',  # ASS filter for karaoke effects (\k tags)
+                '-vf', video_filter,  # Video filter chain (crop + ASS)
                 '-c:v', video_codec,  # Use libx264 (supported by system ffmpeg)
                 '-crf', str(crf),  # CRF quality control
                 '-preset', 'medium',

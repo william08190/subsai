@@ -632,6 +632,34 @@ def webui() -> None:
             else:
                 vertical_margin = None
 
+            # 添加视频宽高比裁剪选择
+            st.markdown("---")
+            aspect_ratio_col1, aspect_ratio_col2 = st.columns([1, 2])
+
+            with aspect_ratio_col1:
+                use_aspect_ratio = st.checkbox('Custom Aspect Ratio', value=False, help='启用视频宽高比裁剪（居中裁剪）')
+
+            with aspect_ratio_col2:
+                if use_aspect_ratio:
+                    aspect_ratio_options = {
+                        '原始尺寸 Original': None,
+                        '16:9 横屏 (YouTube推荐)': '16:9',
+                        '9:16 竖屏 (抖音/快手)': '9:16',
+                        '4:3 传统电视': '4:3',
+                        '1:1 正方形 (Instagram)': '1:1',
+                        '21:9 电影宽屏': '21:9'
+                    }
+
+                    selected_aspect_display = st.selectbox(
+                        'Target Aspect Ratio',
+                        options=list(aspect_ratio_options.keys()),
+                        index=0,
+                        help='选择输出视频的目标宽高比（将从中心裁剪）'
+                    )
+                    aspect_ratio = aspect_ratio_options[selected_aspect_display]
+                else:
+                    aspect_ratio = None
+
             # 使用当前字幕生成卡拉OK视频
             media_file = Path(file_path)
             karaoke_output_filename = st.text_input(
@@ -651,7 +679,7 @@ def webui() -> None:
                             subs = st.session_state['transcribed_subs']
 
                             # 生成卡拉OK字幕
-                            st.info(f"📝 Converting to karaoke format (style: {selected_style}, fontsize: {font_size or 'default'}, position: {vertical_margin or 'default'}px)...")
+                            st.info(f"📝 Converting to karaoke format (style: {selected_style}, fontsize: {font_size or 'default'}, position: {vertical_margin or 'default'}px, aspect_ratio: {aspect_ratio or 'original'})...")
                             karaoke_subs = create_karaoke_subtitles(
                                 subs=subs,
                                 style_name=selected_style,
@@ -670,12 +698,13 @@ def webui() -> None:
                                 karaoke_subs.save(str(karaoke_ass_file))
                                 st.success(f"💾 Karaoke subtitles saved: {karaoke_ass_file}")
 
-                                # 烧录到视频（使用专用卡拉OK烧录方法）
-                                st.info("🎬 Burning karaoke subtitles to video (using ffmpeg with ASS support)...")
+                                # 烧录到视频（使用专用卡拉OK烧录方法，支持宽高比裁剪）
+                                st.info(f"🎬 Burning karaoke subtitles to video (using ffmpeg with ASS support{', cropping to ' + aspect_ratio if aspect_ratio else ''})...")
                                 karaoke_video_path = tools.burn_karaoke_subtitles(
                                     subs=karaoke_subs,
                                     media_file=str(media_file.resolve()),
-                                    output_filename=karaoke_output_filename
+                                    output_filename=karaoke_output_filename,
+                                    aspect_ratio=aspect_ratio
                                 )
 
                                 st.success(f'🎉 Karaoke video generated successfully!')
