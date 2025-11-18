@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from pysubs2.time import ms_to_str, make_time
 from streamlit import runtime
 from streamlit_player import st_player
@@ -280,11 +281,15 @@ def webui() -> None:
         st.markdown("### 🎵 批量处理界面")
         st.markdown("想要批量处理多个视频？试试新的批量处理界面！")
         if st.button("🚀 打开批量处理界面", type="primary", use_container_width=True):
-            st.markdown("""
-            <script>
-                window.open('http://localhost:8001', '_blank');
-            </script>
-            """, unsafe_allow_html=True)
+            # 使用components.html来执行JavaScript
+            components.html(
+                """
+                <script>
+                    window.open('http://localhost:8001', '_blank');
+                </script>
+                """,
+                height=0,
+            )
         st.info("批量处理界面运行在端口 8001\n\n特点：\n- 多文件上传\n- 实时进度追踪\n- 任务队列管理\n- 自动语音识别")
         st.markdown("---")
     st.info(
