@@ -36,7 +36,7 @@ services:
       - ./src:/subsai/src
       - ./webapp:/subsai/webapp
       # Whisper配置文件
-      - ./linto-ai-whisper-timestamped_configs.json:/subsai/linto-ai-whisper-timestamped_configs.json:ro
+      - ./linto-ai-whisper-timestamped_configs.json:/subsai/src/linto-ai-whisper-timestamped_configs.json:ro
       # 输入视频目录（与webui共享）
       - /mnt/c/william/InfiniteTalk-v0828/output:/input:ro
       # 输出目录（与webui共享）
