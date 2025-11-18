@@ -9,6 +9,10 @@ services:
     ports:
       - "8501:8501"
     volumes:
+      # 源码目录挂载（开发模式 - 实时热更新）
+      - ./src:/subsai/src
+      - ./webui.py:/subsai/webui.py
+      - ./pyproject.toml:/subsai/pyproject.toml
       # 输入视频目录
       - /mnt/c/william/InfiniteTalk-v0828/output:/input:ro
       # 输出目录

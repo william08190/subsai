@@ -24,7 +24,7 @@ COPY pyproject.toml .
 COPY ./src ./src
 COPY ./assets ./assets
 
-RUN pip install .
+RUN pip install -e .
 
 EXPOSE 8501
 
