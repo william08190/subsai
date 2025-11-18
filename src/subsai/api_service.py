@@ -96,7 +96,7 @@ class ProcessConfig(BaseModel):
     fontsize: Optional[int] = None  # 字体大小
     vertical_margin: Optional[int] = None  # 垂直边距
     model_name: str = "linto-ai/whisper-timestamped"
-    model_config: Optional[Dict[str, Any]] = None  # Whisper配置
+    whisper_config: Optional[Dict[str, Any]] = None  # Whisper配置
 
 
 class JobStatus(BaseModel):
@@ -174,7 +174,7 @@ async def process_video_job(job_id: str, video_files: List[Path], config: Proces
         tools = Tools()
 
         # 使用配置中的model_config，如果没有则使用默认配置
-        model_config = config.model_config if config.model_config else DEFAULT_WHISPER_CONFIG
+        model_config = config.whisper_config if config.whisper_config else DEFAULT_WHISPER_CONFIG
 
         logger.info(f"使用Whisper配置: {model_config}")
         model = subs_ai.create_model(config.model_name, model_config=model_config)
