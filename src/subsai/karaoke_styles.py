@@ -66,9 +66,9 @@ class KaraokeStyle:
             duration_cs: 持续时间（厘秒，1秒=100厘秒）
 
         Returns:
-            卡拉OK标签字符串 (例如: \\k50)
+            卡拉OK标签字符串 (例如: {\\k50})
         """
-        return f"\\k{duration_cs}"
+        return f"{{\\k{duration_cs}}}"
 
 
 class ClassicStyle(KaraokeStyle):
