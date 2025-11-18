@@ -30,7 +30,10 @@ class KaraokeGenerator:
                  words_per_line: int = 10,
                  max_line_duration_ms: int = 5000,
                  fontsize: Optional[int] = None,
-                 vertical_margin: Optional[int] = None):
+                 vertical_margin: Optional[int] = None,
+                 fontname: Optional[str] = None,
+                 primary_color: Optional[str] = None,
+                 secondary_color: Optional[str] = None):
         """
         初始化卡拉OK生成器
 
@@ -40,8 +43,18 @@ class KaraokeGenerator:
             max_line_duration_ms: 每行最大持续时间（毫秒）
             fontsize: 自定义字体大小（可选，None则使用默认大小）
             vertical_margin: 自定义垂直边距/距底部像素（可选，None则使用默认值）
+            fontname: 自定义字体名称（可选，None则使用默认字体）
+            primary_color: 自定义基础颜色 Hex格式如"#FFFFFF"（可选）
+            secondary_color: 自定义高亮颜色 Hex格式如"#FFD700"（可选）
         """
-        self.style: KaraokeStyle = get_style(style_name, fontsize=fontsize, vertical_margin=vertical_margin)
+        self.style: KaraokeStyle = get_style(
+            style_name,
+            fontsize=fontsize,
+            vertical_margin=vertical_margin,
+            fontname=fontname,
+            primary_color=primary_color,
+            secondary_color=secondary_color
+        )
         self.words_per_line = max(1, min(20, words_per_line))
         self.max_line_duration_ms = max_line_duration_ms
 
@@ -257,7 +270,10 @@ def create_karaoke_subtitles(subs: SSAFile,
                              words_per_line: int = 10,
                              max_line_duration_ms: int = 5000,
                              fontsize: Optional[int] = None,
-                             vertical_margin: Optional[int] = None) -> SSAFile:
+                             vertical_margin: Optional[int] = None,
+                             fontname: Optional[str] = None,
+                             primary_color: Optional[str] = None,
+                             secondary_color: Optional[str] = None) -> SSAFile:
     """
     便捷函数：创建卡拉OK字幕
 
@@ -268,6 +284,9 @@ def create_karaoke_subtitles(subs: SSAFile,
         max_line_duration_ms: 每行最大持续时间（毫秒）
         fontsize: 自定义字体大小（可选，None则使用默认大小）
         vertical_margin: 自定义垂直边距/距底部像素（可选，None则使用默认值）
+        fontname: 自定义字体名称（可选，None则使用默认字体）
+        primary_color: 自定义基础颜色 Hex格式如"#FFFFFF"（可选）
+        secondary_color: 自定义高亮颜色 Hex格式如"#FFD700"（可选）
 
     Returns:
         带卡拉OK效果的SSAFile对象
@@ -277,7 +296,10 @@ def create_karaoke_subtitles(subs: SSAFile,
         words_per_line=words_per_line,
         max_line_duration_ms=max_line_duration_ms,
         fontsize=fontsize,
-        vertical_margin=vertical_margin
+        vertical_margin=vertical_margin,
+        fontname=fontname,
+        primary_color=primary_color,
+        secondary_color=secondary_color
     )
     return generator.generate(subs)
 
