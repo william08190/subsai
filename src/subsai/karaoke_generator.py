@@ -216,8 +216,8 @@ class KaraokeGenerator:
         if not words:
             return ""
 
-        # 添加居中对齐标签
-        result = ["{\\an5}"]  # \an5 = 居中对齐
+        # 添加底部居中对齐标签（左右居中，上下保持用户自定义距离）
+        result = ["{\\an2}"]  # \an2 = 底部居中（水平居中，垂直位置保持距底部的距离）
 
         current_line_width = 0.0
         # 保留20%的边距（左右各10%）
