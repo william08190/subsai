@@ -606,6 +606,19 @@ def webui() -> None:
                     help='每行显示的单词数量'
                 )
 
+            # 添加字体大小控制
+            use_custom_font = st.checkbox('Custom Font Size', value=False, help='启用自定义��体大小（否则使用样式默认大小）')
+            if use_custom_font:
+                font_size = st.slider(
+                    'Font Size',
+                    min_value=20,
+                    max_value=100,
+                    value=36,
+                    help='字幕字体大小（像素）'
+                )
+            else:
+                font_size = None
+
             # 使用当前字幕生成卡拉OK视频
             media_file = Path(file_path)
             karaoke_output_filename = st.text_input(
@@ -625,11 +638,12 @@ def webui() -> None:
                             subs = st.session_state['transcribed_subs']
 
                             # 生成卡拉OK字幕
-                            st.info(f"📝 Converting to karaoke format (style: {selected_style})...")
+                            st.info(f"📝 Converting to karaoke format (style: {selected_style}, fontsize: {font_size or 'default'})...")
                             karaoke_subs = create_karaoke_subtitles(
                                 subs=subs,
                                 style_name=selected_style,
-                                words_per_line=words_per_line
+                                words_per_line=words_per_line,
+                                fontsize=font_size
                             )
 
                             if karaoke_subs is None or len(karaoke_subs) == 0:
