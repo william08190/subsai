@@ -99,6 +99,9 @@ class ProcessConfig(BaseModel):
     whisper_config: Optional[Dict[str, Any]] = None  # Whisper配置
     crf: int = 18  # 视频质量 CRF 值 (0-51, 越低质量越高, 默认18高质量)
     preset: str = "medium"  # 编码速度预设 (ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow)
+    whisper_model_type: Optional[str] = None  # Whisper模型类型 (base, small, medium, large-v2, large-v3, large-v3-turbo)
+    custom_font: Optional[str] = None  # 自定义字体名称
+    custom_colors: Optional[Dict[str, str]] = None  # 自定义颜色 {"primary": "#FFFFFF", "highlight": "#FFD700"}
 
 
 class JobStatus(BaseModel):
@@ -175,10 +178,22 @@ async def process_video_job(job_id: str, video_files: List[Path], config: Proces
         subs_ai = SubsAI()
         tools = Tools()
 
-        # 使用配置中的model_config，如果没有则使用默认配置
-        model_config = config.whisper_config if config.whisper_config else DEFAULT_WHISPER_CONFIG
+        # 构建Whisper模型配置
+        if config.whisper_model_type:
+            # 用户指定了模型类型，动态构建配置
+            model_config = DEFAULT_WHISPER_CONFIG.copy()
+            model_config['model_type'] = config.whisper_model_type
+            logger.info(f"使用用户指定的Whisper模型: {config.whisper_model_type}")
+        elif config.whisper_config:
+            # 使用用户提供的完整配置
+            model_config = config.whisper_config
+            logger.info(f"使用用户提供的Whisper配置")
+        else:
+            # 使用默认配置
+            model_config = DEFAULT_WHISPER_CONFIG
+            logger.info(f"使用默认Whisper配置")
 
-        logger.info(f"使用Whisper配置: {model_config}")
+        logger.info(f"Whisper配置详情: {model_config}")
         model = subs_ai.create_model(config.model_name, model_config=model_config)
 
         # 处理每个视频
@@ -211,12 +226,42 @@ async def process_video_job(job_id: str, video_files: List[Path], config: Proces
 
                 # 2. 转换为卡拉OK字幕
                 logger.info(f"步骤2: 转换为卡拉OK字幕 (style: {config.style_name})...")
+
+                # 提取自定义颜色参数
+                primary_color = None
+                secondary_color = None
+                if config.custom_colors:
+                    primary_color = config.custom_colors.get('primary')
+                    secondary_color = config.custom_colors.get('highlight')
+
+                # 计算视频宽度（用于自动换行）
+                max_line_width_px = None
+                if config.aspect_ratio and config.aspect_ratio.lower() != 'original':
+                    try:
+                        # 常见宽高比对应的宽度（基于1080p高度）
+                        aspect_widths = {
+                            '16:9': 1920,
+                            '9:16': 607,
+                            '4:3': 1440,
+                            '1:1': 1080,
+                            '21:9': 2520
+                        }
+                        max_line_width_px = aspect_widths.get(config.aspect_ratio, 1920)
+                        logger.info(f"根据宽高比 {config.aspect_ratio} 计算视频宽度: {max_line_width_px}px，将启用自动换行")
+                    except Exception as e:
+                        logger.warning(f"计算视频宽度失败: {e}，将不限制行宽")
+                        max_line_width_px = None
+
                 karaoke_subs = create_karaoke_subtitles(
                     subs=subs,
                     style_name=config.style_name,
                     words_per_line=config.words_per_line,
                     fontsize=config.fontsize,
-                    vertical_margin=config.vertical_margin
+                    vertical_margin=config.vertical_margin,
+                    fontname=config.custom_font,
+                    primary_color=primary_color,
+                    secondary_color=secondary_color,
+                    max_line_width_px=max_line_width_px
                 )
 
                 if not karaoke_subs or len(karaoke_subs) == 0:
