@@ -495,32 +495,51 @@ class Tools:
                     base_height = original_height
 
                 base_ratio = base_width / base_height
-
                 logger.info(f"🎯 目标宽高比: {target_ratio:.3f} (当前: {base_ratio:.3f})")
 
-                if abs(target_ratio - base_ratio) > 0.01:  # Only crop if ratios differ
-                    # Calculate crop dimensions based on scaled size
+                # Calculate target standard dimensions
+                # For min_resolution=1080 and aspect_ratio=9:16, this should be exactly 1080x1920
+                min_side = min(base_width, base_height)
+                if min_side >= min_resolution:
+                    # Already meets or exceeds min_resolution, calculate standard size
                     if base_ratio > target_ratio:
-                        # Video is wider, crop width
-                        crop_height = base_height
-                        crop_width = int(base_height * target_ratio)
+                        # Video is wider, short side is height
+                        target_crop_height = base_height
+                        target_crop_width = int(target_crop_height * target_ratio)
                     else:
-                        # Video is taller, crop height
-                        crop_width = base_width
-                        crop_height = int(base_width / target_ratio)
+                        # Video is taller, short side is width
+                        target_crop_width = base_width
+                        target_crop_height = int(target_crop_width / target_ratio)
 
-                    # Ensure even dimensions (required for many codecs)
-                    crop_width = crop_width - (crop_width % 2)
-                    crop_height = crop_height - (crop_height % 2)
+                    # Ensure target dimensions meet min_resolution
+                    crop_min_side = min(target_crop_width, target_crop_height)
+                    if crop_min_side < min_resolution:
+                        # Adjust to meet min_resolution exactly
+                        if target_crop_width < target_crop_height:
+                            # Width is short side
+                            target_crop_width = min_resolution
+                            target_crop_height = int(min_resolution / target_ratio)
+                        else:
+                            # Height is short side
+                            target_crop_height = min_resolution
+                            target_crop_width = int(min_resolution * target_ratio)
 
-                    # Calculate crop position (center crop)
-                    crop_x = (base_width - crop_width) // 2
-                    crop_y = (base_height - crop_height) // 2
+                    # Ensure even dimensions
+                    target_crop_width = target_crop_width - (target_crop_width % 2)
+                    target_crop_height = target_crop_height - (target_crop_height % 2)
 
-                    crop_filter = f"crop={crop_width}:{crop_height}:{crop_x}:{crop_y}"
-                    logger.info(f"✂️  裁剪参数: {crop_filter} (输出尺寸: {crop_width}x{crop_height})")
+                    # Check if crop is needed (dimensions differ from base)
+                    if target_crop_width != base_width or target_crop_height != base_height:
+                        # Calculate crop position (center crop)
+                        crop_x = (base_width - target_crop_width) // 2
+                        crop_y = (base_height - target_crop_height) // 2
+
+                        crop_filter = f"crop={target_crop_width}:{target_crop_height}:{crop_x}:{crop_y}"
+                        logger.info(f"✂️  裁剪到标准尺寸: {crop_filter} (输出: {target_crop_width}x{target_crop_height})")
+                    else:
+                        logger.info(f"✅ 尺寸已是标准尺寸，无需裁剪: {base_width}x{base_height}")
                 else:
-                    logger.info(f"ℹ️  视频已经是目标宽高比，无需裁剪")
+                    logger.warning(f"⚠️  缩放后尺寸({base_width}x{base_height})未达到最小分辨率要求({min_resolution})")
             except (ValueError, ZeroDivisionError) as e:
                 logger.warning(f"⚠️  无效的宽高比格式 '{aspect_ratio}'，将使用原始尺寸: {e}")
                 crop_filter = None
