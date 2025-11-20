@@ -89,20 +89,23 @@ def calculate_uniqueness_params(input_file: str, index: int = 0):
     return params
 
 def get_resolution_scale_params(original_width: int, original_height: int,
-                                  min_height: int = 1080):
+                                  min_resolution: int = 1080):
     """
-    计算分辨率缩放参数,确保至少达到指定高度
+    计算分辨率缩放参数,确保最短边至少达到指定分辨率
 
     Args:
         original_width: 原始宽度
         original_height: 原始高度
-        min_height: 最小目标高度 (默认1080p)
+        min_resolution: 最短边的最小分辨率 (默认1080)
 
     Returns:
         dict: 包含缩放参数的字典
     """
-    if original_height >= min_height:
-        # 已经达到或超过目标分辨率
+    # 确定最短边
+    min_side = min(original_width, original_height)
+
+    if min_side >= min_resolution:
+        # 最短边已经达到或超过目标分辨率
         return {
             'need_scale': False,
             'target_width': original_width,
@@ -110,10 +113,10 @@ def get_resolution_scale_params(original_width: int, original_height: int,
             'scale_filter': None
         }
 
-    # 计算缩放比例
-    scale_ratio = min_height / original_height
-    target_height = min_height
+    # 计算缩放比例（基于最短边）
+    scale_ratio = min_resolution / min_side
     target_width = int(original_width * scale_ratio)
+    target_height = int(original_height * scale_ratio)
 
     # 确保尺寸为偶数 (编码器要求)
     target_width = target_width - (target_width % 2)
