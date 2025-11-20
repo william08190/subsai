@@ -556,33 +556,20 @@ class Tools:
                     else:
                         logger.info(f"✅ 尺寸已是标准尺寸，无需裁剪: {base_width}x{base_height}")
                 else:
-                    logger.warning(f"⚠️  当前尺寸({base_width}x{base_height})不足以裁剪到标准尺寸({ideal_width}x{ideal_height})，需要额外缩放")
-                    # Calculate additional scaling needed
-                    scale_x = ideal_width / base_width if ideal_width > base_width else 1.0
-                    scale_y = ideal_height / base_height if ideal_height > base_height else 1.0
-                    additional_scale = max(scale_x, scale_y)
-
-                    new_width = int(base_width * additional_scale)
-                    new_height = int(base_height * additional_scale)
-                    new_width = new_width - (new_width % 2)
-                    new_height = new_height - (new_height % 2)
-
-                    # Update scale params to include additional scaling
+                    logger.warning(f"⚠️  当前尺寸({base_width}x{base_height})不足以裁剪到标准尺寸({ideal_width}x{ideal_height})，将直接缩放到目标尺寸")
+                    # Directly scale to exact target dimensions, no crop needed
+                    # This avoids potential crop coordinate errors when dimensions are very close
                     scale_params = {
                         'need_scale': True,
-                        'target_width': new_width,
-                        'target_height': new_height,
-                        'scale_filter': f"scale={new_width}:{new_height}:flags=lanczos"
+                        'target_width': ideal_width,
+                        'target_height': ideal_height,
+                        'scale_filter': f"scale={ideal_width}:{ideal_height}:flags=lanczos"
                     }
-                    base_width = new_width
-                    base_height = new_height
-                    logger.info(f"🔄 额外缩放到: {base_width}x{base_height}")
-
-                    # Now crop to ideal size
-                    crop_x = (base_width - ideal_width) // 2
-                    crop_y = (base_height - ideal_height) // 2
-                    crop_filter = f"crop={ideal_width}:{ideal_height}:{crop_x}:{crop_y}"
-                    logger.info(f"✂️  裁剪到标准尺寸: {crop_filter} (输出: {ideal_width}x{ideal_height})")
+                    base_width = ideal_width
+                    base_height = ideal_height
+                    logger.info(f"🎯 直接缩放到标准尺寸: {ideal_width}x{ideal_height}")
+                    logger.info(f"✅ 无需裁剪，已达到精确目标尺寸")
+                    crop_filter = None
             except (ValueError, ZeroDivisionError) as e:
                 logger.warning(f"⚠️  无效的宽高比格式 '{aspect_ratio}'，将使用原始尺寸: {e}")
                 crop_filter = None
