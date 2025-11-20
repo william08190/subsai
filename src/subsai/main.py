@@ -382,10 +382,17 @@ class Tools:
                                video_codec: str = 'libx264',
                                crf: int = 18,
                                preset: str = 'medium',
-                               aspect_ratio: str = None) -> str:
+                               aspect_ratio: str = None,
+                               min_resolution: int = 1080,
+                               enable_uniqueness: bool = True,
+                               uniqueness_index: int = 0) -> str:
         """
         Uses ffmpeg to burn ASS karaoke subtitles into video as hardcoded subtitles.
-        This method preserves ASS karaoke effects (\k tags) by using the subtitles filter.
+        This method preserves ASS karaoke effects (\\k tags) and includes advanced features:
+        - Automatic upscaling to minimum resolution (default 1080p+)
+        - Video uniqueness processing to avoid platform batch detection
+        - Metadata randomization and cleanup
+        - Quality optimization with configurable CRF and preset
 
         Example:
         ```python
@@ -395,10 +402,12 @@ class Tools:
             # Generate karaoke subtitles
             karaoke_subs = create_karaoke_subtitles(original_subs, style_name='classic')
 
-            # Burn to video with aspect ratio cropping and quality settings
+            # Burn to video with full enhancement
             output = Tools.burn_karaoke_subtitles(
                 karaoke_subs, 'input.mp4', 'output_karaoke',
-                aspect_ratio='9:16', crf=18, preset='slow'
+                aspect_ratio='9:16',
+                min_resolution=1080,
+                enable_uniqueness=True
             )
         ```
 
@@ -406,18 +415,31 @@ class Tools:
         :param media_file: path of the video file
         :param output_filename: Output file name (without extension)
         :param video_codec: Video codec for encoding (default: libx264)
-        :param crf: Constant Rate Factor for quality (default: 18, range 0-51, lower = better quality)
-        :param preset: Encoding speed preset (default: medium, options: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow)
+        :param crf: Constant Rate Factor for quality (default: 18, range 0-51, lower = better quality, will be randomized if uniqueness enabled)
+        :param preset: Encoding speed preset (default: medium, will be randomized if uniqueness enabled)
         :param aspect_ratio: Target aspect ratio for cropping (e.g., '16:9', '9:16', '4:3', '1:1', None=original)
+        :param min_resolution: Minimum output height in pixels (default: 1080). Video will be upscaled if needed.
+        :param enable_uniqueness: Enable video uniqueness processing to avoid platform batch detection (default: True)
+        :param uniqueness_index: Index for batch processing to ensure different randomization per video (default: 0)
 
         :return: Absolute path of the output file
         """
         import logging
+        import subprocess
+        from subsai.video_uniqueness import (
+            calculate_uniqueness_params,
+            get_resolution_scale_params,
+            build_uniqueness_filters,
+            build_x264_params
+        )
+
         logger = logging.getLogger(__name__)
 
         logger.info(f"🎤 开始烧录卡拉OK字幕: {media_file}")
         if aspect_ratio:
-            logger.info(f"📐 ���标宽高比: {aspect_ratio}")
+            logger.info(f"📐 目标宽高比: {aspect_ratio}")
+        if enable_uniqueness:
+            logger.info(f"🎲 启用唯一性增强 (索引: {uniqueness_index})")
 
         metadata = ffmpeg.probe(media_file, select_streams="v")['streams'][0]
         assert metadata['codec_type'] == 'video', f'File {media_file} is not a video'
@@ -426,6 +448,33 @@ class Tools:
         original_width = int(metadata['width'])
         original_height = int(metadata['height'])
         logger.info(f"📺 原始视频尺寸: {original_width}x{original_height}")
+
+        # Calculate resolution scaling if needed
+        scale_params = get_resolution_scale_params(original_width, original_height, min_resolution)
+        if scale_params['need_scale']:
+            logger.info(f"🔍 分辨率升级: {original_width}x{original_height} -> {scale_params['target_width']}x{scale_params['target_height']}")
+        else:
+            logger.info(f"✅ 分辨率已满足要求: {original_height}p")
+
+        # Calculate uniqueness parameters if enabled
+        uniqueness_params = None
+        if enable_uniqueness:
+            uniqueness_params = calculate_uniqueness_params(media_file, uniqueness_index)
+            logger.info(f"🎲 唯一性参数:")
+            logger.info(f"  - CRF: {uniqueness_params['crf']}")
+            logger.info(f"  - 预设: {uniqueness_params['preset']}")
+            logger.info(f"  - 饱和度: {uniqueness_params['saturation']:.4f}")
+            logger.info(f"  - 亮度调整: {uniqueness_params['brightness']:.4f}")
+            logger.info(f"  - 对比度: {uniqueness_params['contrast']:.4f}")
+            logger.info(f"  - 噪声强度: {uniqueness_params['noise_strength']:.4f}")
+            logger.info(f"  - 音频比特率: {uniqueness_params['audio_bitrate']}")
+            logger.info(f"  - 音频采样率: {uniqueness_params['audio_sample_rate']}Hz")
+            logger.info(f"  - 创建时间: {uniqueness_params['metadata']['creation_time']}")
+            logger.info(f"  - 编码器: {uniqueness_params['metadata']['encoder']}")
+
+            # Override CRF and preset from uniqueness params
+            crf = uniqueness_params['crf']
+            preset = uniqueness_params['preset']
 
         # Calculate crop parameters if aspect ratio is specified
         crop_filter = None
@@ -462,7 +511,7 @@ class Tools:
                 else:
                     logger.info(f"ℹ️  视频已经是目标宽高比，无需裁剪")
             except (ValueError, ZeroDivisionError) as e:
-                logger.warning(f"⚠️  无效的���高比格式 '{aspect_ratio}'，将使用原始尺寸: {e}")
+                logger.warning(f"⚠️  无效的宽高比格式 '{aspect_ratio}'，将使用原始尺寸: {e}")
                 crop_filter = None
 
         # Create temporary ASS file
@@ -492,38 +541,69 @@ class Tools:
             else:
                 out_file = in_file.parent / f"{in_file.stem}-karaoke{in_file.suffix}"
 
-            # Escape the ASS file path for ffmpeg (Windows paths need special handling)
-            ass_path = ass_temp.name.replace('\\', '/').replace(':', '\\:')
-            logger.info(f"🔧 转义后的ASS路径: {ass_path}")
-
             output_file = str(out_file.resolve())
 
-            # Build ffmpeg command manually for better control over parameter order
-            # Using system ffmpeg (from apt) which supports libx264 and subtitles filter
-            # Use /usr/bin/ffmpeg explicitly to avoid conda's limited ffmpeg
-            import subprocess
-
-            # Construct video filter chain
-            # If crop is needed, apply it before ASS subtitles
-            if crop_filter:
-                video_filter = f"{crop_filter},ass={ass_temp.name}"
+            # Build video filter chain
+            if enable_uniqueness:
+                # Use enhanced filter chain with uniqueness processing
+                video_filter = build_uniqueness_filters(
+                    uniqueness_params,
+                    scale_params if scale_params['need_scale'] else None,
+                    crop_filter,
+                    ass_temp.name
+                )
             else:
-                video_filter = f"ass={ass_temp.name}"
+                # Use basic filter chain without uniqueness
+                filters = []
+                if scale_params['need_scale']:
+                    filters.append(scale_params['scale_filter'])
+                if crop_filter:
+                    filters.append(crop_filter)
+                filters.append(f"ass={ass_temp.name}")
+                video_filter = ",".join(filters)
 
             logger.info(f"🎨 视频滤镜链: {video_filter}")
 
-            # Construct ffmpeg command with proper parameter order
+            # Construct ffmpeg command
             ffmpeg_cmd = [
-                '/usr/bin/ffmpeg',  # Use system ffmpeg explicitly
+                '/usr/bin/ffmpeg',
                 '-i', media_file,
-                '-vf', video_filter,  # Video filter chain (crop + ASS)
-                '-c:v', video_codec,  # Use libx264 (supported by system ffmpeg)
-                '-crf', str(crf),  # CRF quality control
-                '-preset', preset,  # Encoding speed preset (configurable)
-                '-c:a', 'copy',  # Copy audio without re-encoding
-                '-y',
-                output_file
+                '-vf', video_filter,
+                '-c:v', video_codec,
+                '-crf', str(crf),
+                '-preset', preset,
             ]
+
+            # Add x264 parameters if uniqueness is enabled
+            if enable_uniqueness:
+                x264_params_str = build_x264_params(uniqueness_params)
+                ffmpeg_cmd.extend(['-x264-params', x264_params_str])
+                logger.info(f"🔧 x264参数: {x264_params_str}")
+
+                # Re-encode audio with varied parameters
+                ffmpeg_cmd.extend([
+                    '-c:a', 'aac',
+                    '-b:a', uniqueness_params['audio_bitrate'],
+                    '-ar', str(uniqueness_params['audio_sample_rate'])
+                ])
+                logger.info(f"🔊 音频重编码: {uniqueness_params['audio_bitrate']} @ {uniqueness_params['audio_sample_rate']}Hz")
+            else:
+                # Copy audio without re-encoding
+                ffmpeg_cmd.extend(['-c:a', 'copy'])
+
+            # Add metadata randomization if uniqueness is enabled
+            if enable_uniqueness:
+                metadata_dict = uniqueness_params['metadata']
+                ffmpeg_cmd.extend([
+                    '-metadata', f"creation_time={metadata_dict['creation_time']}",
+                    '-metadata', f"encoder={metadata_dict['encoder']}",
+                    '-metadata', 'title=',
+                    '-metadata', 'comment=',
+                    '-map_metadata', '-1',
+                ])
+                logger.info(f"🏷️  元数据清理和随机化完成")
+
+            ffmpeg_cmd.extend(['-y', output_file])
 
             logger.info(f"🎬 执行ffmpeg命令: {' '.join(ffmpeg_cmd)}")
 
@@ -535,6 +615,11 @@ class Tools:
                     check=True
                 )
                 logger.info(f"✅ ffmpeg执行成功")
+
+                # Verify output file
+                if os.path.exists(output_file):
+                    file_size = os.path.getsize(output_file)
+                    logger.info(f"📦 输出文件大小: {file_size / (1024*1024):.2f} MB")
             except subprocess.CalledProcessError as e:
                 error_text = e.stderr.decode('utf-8', errors='ignore')
                 logger.error(f"❌ ffmpeg执行失败:\n{error_text}")
@@ -547,6 +632,8 @@ class Tools:
                 os.unlink(ass_temp.name)
 
         logger.info(f"🎉 卡拉OK字幕烧录完成: {out_file.resolve()}")
+        if enable_uniqueness:
+            logger.info(f"✨ 视频唯一性增强已应用")
         return str(out_file.resolve())
 
 if __name__ == '__main__':
