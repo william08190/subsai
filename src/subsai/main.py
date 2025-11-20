@@ -498,38 +498,55 @@ class Tools:
                 logger.info(f"🎯 目标宽高比: {target_ratio:.3f} (当前: {base_ratio:.3f})")
 
                 # Calculate target standard dimensions
-                # For min_resolution=1080 and aspect_ratio=9:16, this should be exactly 1080x1920
+                # Step 1: Calculate ideal target size based on aspect ratio and min_resolution
+                if base_ratio > target_ratio:
+                    # Video is wider, base short side on width
+                    ideal_width = min_resolution
+                    ideal_height = int(min_resolution / target_ratio)
+                else:
+                    # Video is taller or same, base short side on height
+                    ideal_height = min_resolution
+                    ideal_width = int(min_resolution * target_ratio)
+
+                # Ensure even dimensions
+                ideal_width = ideal_width - (ideal_width % 2)
+                ideal_height = ideal_height - (ideal_height % 2)
+
+                logger.info(f"📐 理想标准尺寸: {ideal_width}x{ideal_height}")
+
+                # Step 2: Check if current base size can accommodate the ideal target
                 min_side = min(base_width, base_height)
-                if min_side >= min_resolution:
-                    # Already meets or exceeds min_resolution, calculate standard size
-                    if base_ratio > target_ratio:
-                        # Video is wider, short side is height
-                        target_crop_height = base_height
-                        target_crop_width = int(target_crop_height * target_ratio)
-                    else:
-                        # Video is taller, short side is width
-                        target_crop_width = base_width
-                        target_crop_height = int(target_crop_width / target_ratio)
-
-                    # Ensure target dimensions meet min_resolution
-                    crop_min_side = min(target_crop_width, target_crop_height)
-                    if crop_min_side < min_resolution:
-                        # Adjust to meet min_resolution exactly
-                        if target_crop_width < target_crop_height:
-                            # Width is short side
-                            target_crop_width = min_resolution
-                            target_crop_height = int(min_resolution / target_ratio)
-                        else:
-                            # Height is short side
-                            target_crop_height = min_resolution
-                            target_crop_width = int(min_resolution * target_ratio)
-
-                    # Ensure even dimensions
-                    target_crop_width = target_crop_width - (target_crop_width % 2)
-                    target_crop_height = target_crop_height - (target_crop_height % 2)
+                if base_width >= ideal_width and base_height >= ideal_height and min_side >= min_resolution:
+                    # Current size is large enough, can crop to ideal size
+                    target_crop_width = ideal_width
+                    target_crop_height = ideal_height
 
                     # Check if crop is needed (dimensions differ from base)
                     if target_crop_width != base_width or target_crop_height != base_height:
+                        # Validate crop dimensions
+                        if target_crop_width > base_width or target_crop_height > base_height:
+                            logger.warning(f"⚠️  裁剪尺寸({target_crop_width}x{target_crop_height})超出视频尺寸({base_width}x{base_height})，将进行额外缩放")
+                            # Need additional scaling
+                            scale_x = target_crop_width / base_width if target_crop_width > base_width else 1.0
+                            scale_y = target_crop_height / base_height if target_crop_height > base_height else 1.0
+                            additional_scale = max(scale_x, scale_y)
+
+                            new_width = int(base_width * additional_scale)
+                            new_height = int(base_height * additional_scale)
+                            new_width = new_width - (new_width % 2)
+                            new_height = new_height - (new_height % 2)
+
+                            # Update scale params
+                            scale_params = {
+                                'need_scale': True,
+                                'target_width': new_width,
+                                'target_height': new_height,
+                                'scale_filter': f"scale={new_width}:{new_height}:flags=lanczos"
+                            }
+                            base_width = new_width
+                            base_height = new_height
+                            logger.info(f"🔄 额外缩放到: {base_width}x{base_height}")
+
                         # Calculate crop position (center crop)
                         crop_x = (base_width - target_crop_width) // 2
                         crop_y = (base_height - target_crop_height) // 2
@@ -539,7 +556,33 @@ class Tools:
                     else:
                         logger.info(f"✅ 尺寸已是标准尺寸，无需裁剪: {base_width}x{base_height}")
                 else:
-                    logger.warning(f"⚠️  缩放后尺寸({base_width}x{base_height})未达到最小分辨率要求({min_resolution})")
+                    logger.warning(f"⚠️  当前尺寸({base_width}x{base_height})不足以裁剪到标准尺寸({ideal_width}x{ideal_height})，需要额外缩放")
+                    # Calculate additional scaling needed
+                    scale_x = ideal_width / base_width if ideal_width > base_width else 1.0
+                    scale_y = ideal_height / base_height if ideal_height > base_height else 1.0
+                    additional_scale = max(scale_x, scale_y)
+
+                    new_width = int(base_width * additional_scale)
+                    new_height = int(base_height * additional_scale)
+                    new_width = new_width - (new_width % 2)
+                    new_height = new_height - (new_height % 2)
+
+                    # Update scale params to include additional scaling
+                    scale_params = {
+                        'need_scale': True,
+                        'target_width': new_width,
+                        'target_height': new_height,
+                        'scale_filter': f"scale={new_width}:{new_height}:flags=lanczos"
+                    }
+                    base_width = new_width
+                    base_height = new_height
+                    logger.info(f"🔄 额外缩放到: {base_width}x{base_height}")
+
+                    # Now crop to ideal size
+                    crop_x = (base_width - ideal_width) // 2
+                    crop_y = (base_height - ideal_height) // 2
+                    crop_filter = f"crop={ideal_width}:{ideal_height}:{crop_x}:{crop_y}"
+                    logger.info(f"✂️  裁剪到标准尺寸: {crop_filter} (输出: {ideal_width}x{ideal_height})")
             except (ValueError, ZeroDivisionError) as e:
                 logger.warning(f"⚠️  无效的宽高比格式 '{aspect_ratio}'，将使用原始尺寸: {e}")
                 crop_filter = None
