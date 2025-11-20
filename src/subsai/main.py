@@ -483,28 +483,39 @@ class Tools:
                 # Parse target aspect ratio
                 target_w, target_h = map(int, aspect_ratio.split(':'))
                 target_ratio = target_w / target_h
-                original_ratio = original_width / original_height
 
-                logger.info(f"🎯 目标宽高比: {target_ratio:.3f} (原始: {original_ratio:.3f})")
+                # Use scaled dimensions for crop calculation if scaling is enabled
+                # This ensures crop works on the final scaled resolution
+                if scale_params['need_scale']:
+                    base_width = scale_params['target_width']
+                    base_height = scale_params['target_height']
+                    logger.info(f"🎯 基于缩放后尺寸计算裁剪: {base_width}x{base_height}")
+                else:
+                    base_width = original_width
+                    base_height = original_height
 
-                if abs(target_ratio - original_ratio) > 0.01:  # Only crop if ratios differ
-                    # Calculate crop dimensions
-                    if original_ratio > target_ratio:
-                        # Original is wider, crop width
-                        crop_height = original_height
-                        crop_width = int(original_height * target_ratio)
+                base_ratio = base_width / base_height
+
+                logger.info(f"🎯 目标宽高比: {target_ratio:.3f} (当前: {base_ratio:.3f})")
+
+                if abs(target_ratio - base_ratio) > 0.01:  # Only crop if ratios differ
+                    # Calculate crop dimensions based on scaled size
+                    if base_ratio > target_ratio:
+                        # Video is wider, crop width
+                        crop_height = base_height
+                        crop_width = int(base_height * target_ratio)
                     else:
-                        # Original is taller, crop height
-                        crop_width = original_width
-                        crop_height = int(original_width / target_ratio)
+                        # Video is taller, crop height
+                        crop_width = base_width
+                        crop_height = int(base_width / target_ratio)
 
                     # Ensure even dimensions (required for many codecs)
                     crop_width = crop_width - (crop_width % 2)
                     crop_height = crop_height - (crop_height % 2)
 
                     # Calculate crop position (center crop)
-                    crop_x = (original_width - crop_width) // 2
-                    crop_y = (original_height - crop_height) // 2
+                    crop_x = (base_width - crop_width) // 2
+                    crop_y = (base_height - crop_height) // 2
 
                     crop_filter = f"crop={crop_width}:{crop_height}:{crop_x}:{crop_y}"
                     logger.info(f"✂️  裁剪参数: {crop_filter} (输出尺寸: {crop_width}x{crop_height})")
