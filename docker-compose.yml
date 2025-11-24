@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  subsai-webui-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: subsai-webui
+    ports:
+      - "8501:8501"
+    volumes:
+      # 源码目录挂载（开发模式 - 实时热更新）
+      - ./src:/subsai/src
+      - ./webui.py:/subsai/webui.py
+      - ./pyproject.toml:/subsai/pyproject.toml
+      # Whisper模型配置文件
+      - ./linto-ai-whisper-timestamped_configs.json:/subsai/linto-ai-whisper-timestamped_configs.json:ro
+      # 输入视频目录
+      - /mnt/c/william/InfiniteTalk-v0828/output:/input:ro
+      # 输出目录
+      - /mnt/c/Users/xiaox/Videos/KaraokeOutput:/output
+      # 模型缓存目录（避免每次重新下载）
+      - subsai-models:/root/.cache
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_ENDPOINT=https://hf-mirror.com
+    restart: unless-stopped
+
+  subsai-batch-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: subsai-batch-api
+    ports:
+      - "8001:8001"
+    volumes:
+      # 源码目录挂载
+      - ./src:/subsai/src
+      - ./webapp:/subsai/webapp
+      # Whisper模型配置文件
+      - ./linto-ai-whisper-timestamped_configs.json:/subsai/linto-ai-whisper-timestamped_configs.json:ro
+      # 输入视频目录（与webui共享）
+      - /mnt/c/william/InfiniteTalk-v0828/output:/input:ro
+      # 输出目录（与webui共享）
+      - /mnt/c/Users/xiaox/Videos/KaraokeOutput:/output
+      # 模型缓存目录（与webui共享）
+      - subsai-models:/root/.cache
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_ENDPOINT=https://hf-mirror.com
+    entrypoint: []
+    command: python -m uvicorn subsai.api_service:app --host 0.0.0.0 --port 8001 --reload
+    working_dir: /subsai/src
+    restart: unless-stopped
+
+volumes:
+  subsai-models:

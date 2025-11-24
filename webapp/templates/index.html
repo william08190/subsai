@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 自动化歌词视频处理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航栏 -->
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <i class="fas fa-music"></i>
+                    <h1>自动化歌词视频处理系统</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="upload">
+                        <i class="fas fa-upload"></i> 上传视频
+                    </button>
+                    <button class="nav-btn" data-tab="process">
+                        <i class="fas fa-cog"></i> 处理设置
+                    </button>
+                    <button class="nav-btn" data-tab="jobs">
+                        <i class="fas fa-tasks"></i> 任务列表
+                    </button>
+                    <button class="nav-btn" data-tab="downloads">
+                        <i class="fas fa-download"></i> 下载中心
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="main">
+            <div class="container">
+
+                <!-- 上传视频标签页 -->
+                <section id="upload-tab" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-cloud-upload-alt"></i> 上传视频文件</h2>
+                            <p class="subtitle">支持格式：MP4, MKV, AVI, MOV, WEBM</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="upload-area" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h3>拖拽视频文件到这里</h3>
+                                <p>或者</p>
+                                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                    <i class="fas fa-folder-open"></i> 选择文件
+                                </button>
+                                <input type="file" id="fileInput" multiple accept="video/*" style="display: none;">
+                                <p class="hint">可以一次选择多个视频文件</p>
+                            </div>
+
+                            <!-- 文件列表 -->
+                            <div id="fileList" class="file-list" style="display: none;">
+                                <h3>已选择的文件</h3>
+                                <div id="fileItems"></div>
+                                <div class="actions">
+                                    <button class="btn btn-success" id="uploadBtn">
+                                        <i class="fas fa-upload"></i> 上传所有文件
+                                    </button>
+                                    <button class="btn btn-secondary" id="clearBtn">
+                                        <i class="fas fa-trash"></i> 清空列表
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 上传进度 -->
+                            <div id="uploadProgress" class="upload-progress" style="display: none;">
+                                <h3>上传中...</h3>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="uploadProgressBar"></div>
+                                </div>
+                                <p id="uploadStatus">准备上传...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 处理设置标签页 -->
+                <section id="process-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-sliders-h"></i> 处理设置</h2>
+                            <p class="subtitle">自定义您的歌词视频样式</p>
+                        </div>
+                        <div class="card-body">
+                            <form id="configForm">
+                                <!-- 视频比例 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-expand"></i> 视频比例</label>
+                                    <div class="radio-group" id="ratioGroup">
+                                        <!-- 动态加载 -->
+                                    </div>
+                                </div>
+
+                                <!-- 卡拉OK效果 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-magic"></i> 卡拉OK样式</label>
+                                    <div class="effect-grid" id="effectGrid">
+                                        <!-- 动态加载 -->
+                                    </div>
+                                    <p class="hint">选择卡拉OK字幕样式（可在下方自定义字体和颜色）</p>
+                                </div>
+
+                                <!-- 字体设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-font"></i> 字体设置（可选）</label>
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="fontName" style="font-size: 0.875rem; color: #718096;">字体名称</label>
+                                            <select id="fontName" class="form-control">
+                                                <option value="">使用样式默认字体</option>
+                                                <option value="Microsoft YaHei">微软雅黑</option>
+                                                <option value="SimHei">黑体</option>
+                                                <option value="SimSun">宋体</option>
+                                                <option value="KaiTi">楷体</option>
+                                                <option value="Arial">Arial</option>
+                                                <option value="Arial Black">Arial Black</option>
+                                                <option value="Impact">Impact</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="fontSize" style="font-size: 0.875rem; color: #718096;">字体大小(px)</label>
+                                            <input type="number" id="fontSize" class="form-control" min="20" max="100" step="2" placeholder="默认">
+                                        </div>
+                                    </div>
+                                    <p class="hint">留空则使用所选卡拉OK样式的默认字体设置</p>
+                                </div>
+
+                                <!-- 颜色设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-palette"></i> 颜色设置（可选）</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="primaryColor" style="font-size: 0.875rem; color: #718096;">基础颜色</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                <input type="color" id="primaryColor" value="#FFFFFF" style="width: 60px; height: 40px; border: 2px solid #e2e8f0; border-radius: 4px; cursor: pointer;">
+                                                <input type="text" id="primaryColorHex" class="form-control" value="#FFFFFF" placeholder="#FFFFFF" style="flex: 1;">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="highlightColor" style="font-size: 0.875rem; color: #718096;">高亮颜色</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                <input type="color" id="highlightColor" value="#FFD700" style="width: 60px; height: 40px; border: 2px solid #e2e8f0; border-radius: 4px; cursor: pointer;">
+                                                <input type="text" id="highlightColorHex" class="form-control" value="#FFD700" placeholder="#FFD700" style="flex: 1;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="hint">留空则使用所选卡拉OK样式的默认颜色</p>
+                                </div>
+
+                                <!-- Whisper模型选择 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-microphone"></i> Whisper模型（可选）</label>
+                                    <select id="whisperModel" class="form-control">
+                                        <option value="">使用默认配置 (large-v3-turbo)</option>
+                                        <option value="base">base - 快速但准确度较低</option>
+                                        <option value="small">small - 平衡速度和准确度</option>
+                                        <option value="medium">medium - 较高准确度</option>
+                                        <option value="large-v2">large-v2 - 高准确度</option>
+                                        <option value="large-v3">large-v3 - 最高准确度</option>
+                                        <option value="large-v3-turbo">large-v3-turbo - 推荐（快速+高准确度）</option>
+                                    </select>
+                                    <p class="hint">留空则使用配置文件中的默认模型 (large-v3-turbo)</p>
+                                </div>
+
+                                <!-- 高级设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-cogs"></i> 高级设置（可选）</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="wordsPerLine" style="font-size: 0.875rem; color: #718096;">每行单词数</label>
+                                            <input type="number" id="wordsPerLine" class="form-control" min="3" max="20" value="10">
+                                        </div>
+                                        <div>
+                                            <label for="verticalMargin" style="font-size: 0.875rem; color: #718096;">字幕距底部距离(px)</label>
+                                            <input type="number" id="verticalMargin" class="form-control" min="10" max="200" placeholder="默认50">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 视频质量设置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-video"></i> 视频质量设置</label>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                        <div>
+                                            <label for="videoQuality" style="font-size: 0.875rem; color: #718096;">视频质量</label>
+                                            <select id="videoQuality" class="form-control">
+                                                <option value="18">极高质量 (CRF 18) - 推荐</option>
+                                                <option value="20">高质量 (CRF 20)</option>
+                                                <option value="23">标准质量 (CRF 23)</option>
+                                                <option value="26">中等质量 (CRF 26)</option>
+                                                <option value="28">较低质量 (CRF 28)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="encodeSpeed" style="font-size: 0.875rem; color: #718096;">编码速度</label>
+                                            <select id="encodeSpeed" class="form-control">
+                                                <option value="ultrafast">超快速 (文件较大)</option>
+                                                <option value="superfast">极快速</option>
+                                                <option value="veryfast">很快速</option>
+                                                <option value="faster">较快速</option>
+                                                <option value="fast">快速</option>
+                                                <option value="medium" selected>中速 (推荐)</option>
+                                                <option value="slow">慢速 (质量更好)</option>
+                                                <option value="slower">很慢速</option>
+                                                <option value="veryslow">极慢速 (最佳质量)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p class="hint">CRF值越低质量越高但文件越大。编码速度越慢质量越好但处理时间越长。</p>
+                                </div>
+
+                                <!-- Whisper配置说明 -->
+                                <div class="form-group">
+                                    <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
+                                        <p style="margin: 0; color: #1976D2;">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>AI语音识别：</strong>使用 Whisper large-v3-turbo 模型，支持自动语言检测和词级时间戳
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="actions">
+                                    <button type="button" class="btn btn-success" id="startProcessBtn">
+                                        <i class="fas fa-play"></i> 开始处理
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" id="resetConfigBtn">
+                                        <i class="fas fa-undo"></i> 重置默认
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 任务列表标签页 -->
+                <section id="jobs-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-tasks"></i> 处理任务</h2>
+                            <button class="btn btn-sm btn-primary" id="refreshJobsBtn">
+                                <i class="fas fa-sync"></i> 刷新
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="jobsList"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 下载中心标签页 -->
+                <section id="downloads-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-download"></i> 下载中心</h2>
+                            <p class="subtitle">所有已完成的歌词视频</p>
+                        </div>
+                        <div class="card-body">
+                            <div id="downloadsList"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- 底部信息 -->
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2025 自动化歌词视频处理系统 | Powered by FastAPI + Vue.js</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast通知 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 脚本 -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
